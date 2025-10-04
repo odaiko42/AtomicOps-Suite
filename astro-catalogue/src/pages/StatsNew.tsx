@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { TrendingUp, TrendingDown, Calendar, Clock, CheckCircle, XCircle, BarChart3, PieChart, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,11 +64,6 @@ export default function Stats() {
     .sort((a, b) => b.successRate - a.successRate)
     .slice(0, 5);
 
-  const problematic = performanceData
-    .filter(s => s.successRate < 96)
-    .sort((a, b) => a.successRate - b.successRate)
-    .slice(0, 3);
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -85,74 +80,76 @@ export default function Stats() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Statistiques & Analytics</h2>
-          <p className="text-muted-foreground">Analyse détaillée de l'utilisation des scripts</p>
+          <h2 className="text-3xl font-bold tracking-tight">Statistiques</h2>
+          <p className="text-muted-foreground">Analyse des performances et tendances</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[200px]">
-            <Calendar className="mr-2 h-4 w-4" />
+          <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="7">7 derniers jours</SelectItem>
             <SelectItem value="30">30 derniers jours</SelectItem>
-            <SelectItem value="90">90 derniers jours</SelectItem>
-            <SelectItem value="365">1 an</SelectItem>
+            <SelectItem value="90">3 derniers mois</SelectItem>
+            <SelectItem value="365">Année complète</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Main Stats */}
+      {/* Métriques principales */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-              <Clock className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Scripts Total</p>
-              <p className="text-2xl font-bold text-foreground">{totalScripts}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Scripts</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalScripts}</div>
+            <p className="text-xs text-muted-foreground">
+              +{recentScripts.length} ce mois
+            </p>
+          </CardContent>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
-              <CheckCircle className="h-6 w-6 text-success" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Scripts Stables</p>
-              <p className="text-2xl font-bold text-success">{stableScripts}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Scripts Stables</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stableScripts}</div>
+            <p className="text-xs text-muted-foreground">
+              {((stableScripts / totalScripts) * 100).toFixed(1)}% du total
+            </p>
+          </CardContent>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-              <XCircle className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Scripts Test</p>
-              <p className="text-2xl font-bold text-orange-600">{testingScripts}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">En Test</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{testingScripts}</div>
+            <p className="text-xs text-muted-foreground">
+              Scripts en validation
+            </p>
+          </CardContent>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100">
-              <TrendingUp className="h-6 w-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Brouillons</p>
-              <p className="text-2xl font-bold text-red-600">{draftScripts}</p>
-            </div>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Brouillons</CardTitle>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{draftScripts}</div>
+            <p className="text-xs text-muted-foreground">
+              Scripts en développement
+            </p>
+          </CardContent>
         </Card>
       </div>
 
@@ -295,39 +292,6 @@ export default function Stats() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Scripts problématiques */}
-      {problematic.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-500" />
-              Scripts Nécessitant une Attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {problematic.map((script) => (
-                <div key={script.name} className="flex items-center justify-between p-2 rounded-lg bg-red-50">
-                  <div className="flex items-center gap-3">
-                    <XCircle className="h-5 w-5 text-red-500" />
-                    <div>
-                      <p className="font-medium text-sm">{script.name}</p>
-                      <Badge variant="destructive" className="text-xs">
-                        {script.category}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-red-600">{script.successRate.toFixed(1)}%</p>
-                    <p className="text-xs text-muted-foreground">succès</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
