@@ -1,0 +1,4 @@
+INSERT OR REPLACE INTO scripts (nom, categorie, description, status, date_creation, version) VALUES 
+('get-system.info.sh', 'Information Système', 'Récupère les informations système (hostname, OS, version, architecture, uptime, kernel)', 'completed', datetime('now'), '1.0'),
+('list-user.all.sh', 'Gestion Utilisateurs', 'Liste tous les utilisateurs système avec informations détaillées (username, UID, GID, home, shell)', 'completed', datetime('now'), '1.0'),
+('list-service.all.sh', 'Gestion Services', 'Liste tous les services systemd avec leurs états (active/inactive, enabled/disabled)', 'completed', datetime('now'), '1.0');

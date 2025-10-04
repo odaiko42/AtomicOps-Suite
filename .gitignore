@@ -1,0 +1,85 @@
+# Logs et monitoring
+logs/*.log
+logs/debug/*
+logs/error/*
+monitoring/data/*
+monitoring/*.log
+
+# Fichiers temporaires de scripts
+*.tmp
+*.temp
+/tmp/
+temp/
+
+# Fichiers de configuration locaux et secrets
+config/local.*
+config/*.local
+.env
+.env.local
+*.secret
+secrets/
+
+# Données de test et sandbox
+tests/sandbox/*
+tests/temp/*
+tests/fixtures/generated/*
+
+# Outputs de validation
+validation-results.json
+compliance-report.*
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE et éditeurs
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.sublime-*
+
+# Données de runtime Proxmox
+runtime/
+*.pid
+*.lock
+
+# Fichiers de backup automatiques
+*.backup
+backup-*/
+backups/auto/*
+
+# Outputs JSON de scripts
+output/*.json
+results/*.json
+*.result
+
+# Certificats et clés (sécurité)
+*.key
+*.crt
+*.pem
+*.p12
+certificates/
+
+# Données spécifiques aux CTs
+ct-configs/generated/*
+ct-templates/downloaded/*
+storage-configs/local/*
+
+# Node modules si des outils JS sont ajoutés
+node_modules/
+npm-debug.log*
+
+# Python cache si des outils Python sont ajoutés
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Archives et ISO
+*.iso
+*.img
+*.qcow2
+*.vmdk
