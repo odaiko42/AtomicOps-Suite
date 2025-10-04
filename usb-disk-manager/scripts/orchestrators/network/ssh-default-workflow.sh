@@ -53,6 +53,121 @@ TARGET_DIRECTORY="$DEFAULT_DIRECTORY"
 ATOMIC_SSH_CONNECT=""
 ATOMIC_SSH_EXECUTE=""
 
+# === VARIABLES DE GESTION DE SESSION ===
+SSH_SESSION_ACTIVE=false
+SSH_CONNECTION_PID=""
+SESSION_START_TIME=""
+SESSION_CLEANUP_REQUIRED=false
+
+#===============================================================================
+# FONCTIONS DE GESTION DE SESSION SSH
+#===============================================================================
+
+# Trigger d'ouverture de session SSH avec gestion d'état
+ssh_session_open_trigger() {
+    local session_start=$(date +%s.%N)
+    SESSION_START_TIME="$session_start"
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Ouverture de session SSH vers $USERNAME@$HOST"
+    
+    # Vérification que la session n'est pas déjà active
+    if [[ "$SSH_SESSION_ACTIVE" == true ]]; then
+        json_error "TRIGGER: Une session SSH est déjà active"
+        return 1
+    fi
+    
+    # Marquage du début de session
+    SSH_SESSION_ACTIVE=true
+    SESSION_CLEANUP_REQUIRED=true
+    
+    # Test de connectivité initial (compatible WSL/Windows)
+    [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Test de connectivité réseau vers $HOST:22"
+    
+    # Utilisation de nc ou ping selon disponibilité
+    if command -v nc >/dev/null 2>&1; then
+        if ! timeout 5 nc -z "$HOST" 22 2>/dev/null; then
+            json_error "TRIGGER: Host $HOST inaccessible sur le port 22 (nc test)"
+            ssh_session_close_trigger "error"
+            return 2
+        fi
+    elif command -v ping >/dev/null 2>&1; then
+        if ! ping -c 1 -W 1000 "$HOST" >/dev/null 2>&1; then
+            json_error "TRIGGER: Host $HOST inaccessible (ping test)"
+            ssh_session_close_trigger "error"  
+            return 2
+        fi
+    else
+        [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Pas d'outils de test réseau disponibles, connexion assumée possible"
+    fi
+    
+    [[ "$DEBUG_MODE" == true ]] && json_success "TRIGGER: Connectivité réseau établie vers $HOST"
+    
+    # Enregistrement des métadonnées de session
+    echo "$session_start" > /tmp/ssh_session_start_$$
+    echo "$HOST" > /tmp/ssh_session_host_$$
+    echo "$USERNAME" > /tmp/ssh_session_user_$$
+    
+    [[ "$DEBUG_MODE" == true ]] && json_success "TRIGGER: Session SSH initialisée avec succès"
+    
+    return 0
+}
+
+# Trigger de fermeture de session SSH avec nettoyage complet
+ssh_session_close_trigger() {
+    local closure_reason=${1:-"normal"}
+    local session_end=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Fermeture de session SSH (raison: $closure_reason)"
+    
+    # Calcul de la durée totale de session si disponible
+    if [[ -n "$SESSION_START_TIME" ]]; then
+        local total_duration=$(echo "$session_end - $SESSION_START_TIME" | bc -l 2>/dev/null || echo "0.00")
+        [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Durée totale de session: ${total_duration}s"
+        echo "$total_duration" > /tmp/ssh_session_duration_$$
+    fi
+    
+    # Nettoyage des processus SSH actifs si nécessaire
+    if [[ -n "$SSH_CONNECTION_PID" ]] && kill -0 "$SSH_CONNECTION_PID" 2>/dev/null; then
+        [[ "$DEBUG_MODE" == true ]] && json_debug "TRIGGER: Terminaison du processus SSH PID: $SSH_CONNECTION_PID"
+        kill -TERM "$SSH_CONNECTION_PID" 2>/dev/null || true
+        sleep 1
+        kill -KILL "$SSH_CONNECTION_PID" 2>/dev/null || true
+    fi
+    
+    # Nettoyage des fichiers de session
+    rm -f /tmp/ssh_session_*_$$ 2>/dev/null || true
+    
+    # Réinitialisation des variables d'état
+    SSH_SESSION_ACTIVE=false
+    SSH_CONNECTION_PID=""
+    SESSION_START_TIME=""
+    SESSION_CLEANUP_REQUIRED=false
+    
+    [[ "$DEBUG_MODE" == true ]] && json_success "TRIGGER: Session SSH fermée et nettoyée"
+    
+    return 0
+}
+
+# Vérification de l'état de session SSH
+ssh_session_status_check() {
+    local status_info=""
+    
+    if [[ "$SSH_SESSION_ACTIVE" == true ]]; then
+        status_info="ACTIVE"
+        [[ -n "$SESSION_START_TIME" ]] && {
+            local current_time=$(date +%s.%N)
+            local elapsed=$(echo "$current_time - $SESSION_START_TIME" | bc -l 2>/dev/null || echo "0.00")
+            status_info="$status_info (${elapsed}s)"
+        }
+    else
+        status_info="INACTIVE"
+    fi
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "STATUS: Session SSH $status_info"
+    
+    return 0
+}
+
 #===============================================================================
 # FONCTIONS D'AIDE ET CONFIGURATION
 #===============================================================================
@@ -65,11 +180,13 @@ USAGE:
     $(basename "$0") [OPTIONS]
 
 DESCRIPTION:
-    Orchestre un workflow SSH complet incluant :
+    Orchestre un workflow SSH complet avec gestion d'état incluant :
+    - TRIGGER: Initialisation de session SSH avec vérifications
     - Connexion SSH sécurisée sur le serveur cible
-    - Navigation vers le répertoire /root/script
+    - Navigation vers le répertoire cible
     - Affichage récursif du contenu du répertoire
-    - Fermeture propre de la session SSH
+    - Vérification d'état de session
+    - TRIGGER: Fermeture propre et nettoyage de la session SSH
 
 OPTIONS:
     -h, --host HOST         Serveur SSH cible (défaut: $DEFAULT_HOST)
@@ -102,13 +219,15 @@ SORTIE JSON:
         "workflow": "$WORKFLOW_NAME",
         "target": "user@host:directory", 
         "steps_completed": number,
-        "total_steps": 4,
+        "total_steps": 6,
         "execution_time": "X.XXs",
         "results": {
+            "session_init": {...},
             "connection": {...},
             "navigation": {...},
             "listing": {...},
-            "disconnection": {...}
+            "session_status": {...},
+            "session_cleanup": {...}
         },
         "error": "message si échec"
     }
@@ -370,41 +489,64 @@ execute_session_closure() {
 execute_workflow() {
     local workflow_start=$(date +%s.%N)
     local steps_completed=0
-    local total_steps=4
+    local total_steps=6  # Ajout des étapes de trigger
     
     [[ "$QUIET_MODE" == false ]] && json_info "Début du workflow SSH vers $USERNAME@$HOST:$TARGET_DIRECTORY"
     
+    # ÉTAPE 0 : TRIGGER D'OUVERTURE DE SESSION
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 0/6 : Initialisation de session SSH"
+    if ! ssh_session_open_trigger; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec initialisation session SSH"
+        return 1
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 0/6 : Session SSH initialisée"
+    
     # ÉTAPE 1 : Connexion SSH
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 1/6 : Établissement connexion SSH"
     if ! execute_ssh_connection; then
-        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec connexion SSH"
+        local connection_exit_code=$?
+        ssh_session_close_trigger "connection_failed"
+        generate_error_json $connection_exit_code $steps_completed $total_steps "$workflow_start" "Échec connexion SSH"
         return 2
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 1/4 : Connexion SSH réussie"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 1/6 : Connexion SSH établie"
     
     # ÉTAPE 2 : Navigation vers le répertoire
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 2/6 : Navigation vers répertoire cible"
     if ! execute_directory_navigation; then
+        ssh_session_close_trigger "navigation_failed"
         generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec navigation répertoire"
         return 3
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 2/4 : Navigation répertoire réussie"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 2/6 : Navigation répertoire réussie"
     
     # ÉTAPE 3 : Affichage récursif
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 3/6 : Exploration récursive du contenu"
     if ! execute_recursive_listing; then
+        ssh_session_close_trigger "listing_failed"
         generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec affichage récursif"
         return 4
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 3/4 : Affichage récursif réussi"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 3/6 : Affichage récursif complété"
     
-    # ÉTAPE 4 : Fermeture de session
-    if ! execute_session_closure; then
-        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec fermeture session"
+    # ÉTAPE 4 : Vérification d'état de session
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 4/6 : Vérification d'état de session"
+    ssh_session_status_check
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 4/6 : État de session vérifié"
+    
+    # ÉTAPE 5 : TRIGGER DE FERMETURE DE SESSION
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 5/6 : Fermeture propre de session SSH"
+    if ! ssh_session_close_trigger "workflow_completed"; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec fermeture session SSH"
         return 5
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 4/4 : Fermeture session réussie"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 5/6 : Session SSH fermée proprement"
     
     # Génération du JSON de succès
     generate_success_json $steps_completed $total_steps "$workflow_start"
@@ -504,7 +646,17 @@ EOF
 }
 
 cleanup_temp_files() {
+    # Nettoyage des fichiers temporaires du workflow
     rm -f /tmp/ssh_workflow_*_$$ 2>/dev/null || true
+    
+    # Nettoyage des fichiers de session SSH
+    rm -f /tmp/ssh_session_*_$$ 2>/dev/null || true
+    
+    # Fermeture de session SSH si nécessaire
+    if [[ "$SESSION_CLEANUP_REQUIRED" == true ]]; then
+        [[ "$DEBUG_MODE" == true ]] && json_debug "CLEANUP: Fermeture de session SSH requise"
+        ssh_session_close_trigger "cleanup"
+    fi
 }
 
 #===============================================================================
@@ -564,8 +716,8 @@ parse_args() {
 #===============================================================================
 
 main() {
-    # Configuration du piégeage des signaux pour nettoyage
-    trap cleanup_temp_files EXIT INT TERM
+    # Configuration du piégeage des signaux pour nettoyage SSH et fichiers temporaires
+    trap 'ssh_session_close_trigger "interrupted"; cleanup_temp_files' EXIT INT TERM
     
     # Parsing des arguments
     parse_args "$@"
