@@ -10,6 +10,7 @@ import Search from "./pages/Search";
 import Stats from "./pages/Stats";
 import Dependencies from "./pages/Dependencies";
 import Settings from "./pages/Settings";
+import Builder from "./pages/Builder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="stats" element={<Stats />} />
             <Route path="dependencies" element={<Dependencies />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="builder" element={<Builder />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

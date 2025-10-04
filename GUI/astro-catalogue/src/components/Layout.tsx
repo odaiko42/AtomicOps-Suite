@@ -8,20 +8,22 @@ import {
   Network, 
   Menu,
   X,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Code
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navigationItems = [
-  { icon: Home, label: "Dashboard", path: "/" },
-  { icon: FileCode, label: "Scripts", path: "/scripts" },
-  { icon: Search, label: "Recherche", path: "/search" },
-  { icon: BarChart3, label: "Statistiques", path: "/stats" },
-  { icon: Network, label: "Dépendances", path: "/dependencies" },
-  { icon: SettingsIcon, label: "Paramètres", path: "/settings" },
-];
+  const navigationItems = [
+    { icon: Home, label: "Dashboard", path: "/" },
+    { icon: FileCode, label: "Scripts", path: "/scripts" },
+    { icon: Search, label: "Recherche", path: "/search" },
+    { icon: BarChart3, label: "Statistiques", path: "/stats" },
+    { icon: Network, label: "Dépendances", path: "/dependencies" },
+    { icon: SettingsIcon, label: "Paramètres", path: "/settings" },
+    { icon: Code, label: "Builder", path: "/builder" },
+  ];
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
