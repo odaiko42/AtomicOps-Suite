@@ -38,8 +38,9 @@ json_debug() { [[ "$DEBUG_MODE" == true ]] && echo "[DEBUG] $1" >&2; }
 # === CONSTANTES DU WORKFLOW ===
 readonly DEFAULT_HOST="192.168.88.50"
 readonly DEFAULT_USER="root" 
-readonly DEFAULT_DIRECTORY="/root/script"
-readonly WORKFLOW_NAME="SSH Default Workflow"
+readonly DEFAULT_DIRECTORY="/root/scripts"
+readonly CT_LAUNCHER_SCRIPT="ct-launcher.sh"
+readonly WORKFLOW_NAME="SSH CT Launcher Workflow"
 
 # === VARIABLES GLOBALES ===
 QUIET_MODE=false
@@ -183,7 +184,8 @@ DESCRIPTION:
     Orchestre un workflow SSH complet avec gestion d'état incluant :
     - TRIGGER: Initialisation de session SSH avec vérifications
     - Connexion SSH sécurisée sur le serveur cible
-    - Navigation vers le répertoire cible
+    - Navigation vers le répertoire cible (/root/scripts par défaut)
+    - Exécution du ct-launcher.sh via session SSH distante
     - Affichage récursif du contenu du répertoire
     - Vérification d'état de session
     - TRIGGER: Fermeture propre et nettoyage de la session SSH
@@ -219,12 +221,13 @@ SORTIE JSON:
         "workflow": "$WORKFLOW_NAME",
         "target": "user@host:directory", 
         "steps_completed": number,
-        "total_steps": 6,
+        "total_steps": 7,
         "execution_time": "X.XXs",
         "results": {
             "session_init": {...},
             "connection": {...},
             "navigation": {...},
+            "ct_launcher": {...},
             "listing": {...},
             "session_status": {...},
             "session_cleanup": {...}
@@ -443,6 +446,57 @@ execute_recursive_listing() {
     return 0
 }
 
+execute_ct_launcher() {
+    local ct_launcher_start=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Exécution de ct-launcher.sh via session SSH"
+    
+    # Construction de la commande pour exécuter ct-launcher.sh
+    local ct_launcher_command="cd '$TARGET_DIRECTORY' && if [[ -f '$CT_LAUNCHER_SCRIPT' ]]; then echo 'LAUNCHER_FOUND' && chmod +x '$CT_LAUNCHER_SCRIPT' && ./$CT_LAUNCHER_SCRIPT --list && echo 'LAUNCHER_SUCCESS'; else echo 'LAUNCHER_NOT_FOUND: $CT_LAUNCHER_SCRIPT non trouvé dans $TARGET_DIRECTORY'; fi"
+    
+    # Construction des arguments pour ssh-execute-command
+    local execute_args=(
+        "--host" "$HOST"
+        "--user" "$USERNAME"
+        "--command" "$ct_launcher_command"
+        "--timeout" "$((CONNECTION_TIMEOUT * 3))"  # Timeout plus long pour ct-launcher
+    )
+    
+    # Ajout de la clé SSH si spécifiée
+    [[ -n "$SSH_KEY" ]] && execute_args+=("--key" "$SSH_KEY")
+    
+    # Ajout des flags de mode
+    [[ "$QUIET_MODE" == true ]] && execute_args+=("--quiet")
+    [[ "$DEBUG_MODE" == true ]] && execute_args+=("--debug")
+    
+    # Exécution de ct-launcher.sh
+    local launcher_result
+    if ! launcher_result=$("$ATOMIC_SSH_EXECUTE" "${execute_args[@]}" 2>&1); then
+        json_error "Échec exécution ct-launcher.sh : $launcher_result"
+        return 4
+    fi
+    
+    # Vérification que ct-launcher a été trouvé et exécuté
+    if echo "$launcher_result" | grep -q "LAUNCHER_NOT_FOUND"; then
+        json_error "ct-launcher.sh non trouvé dans $TARGET_DIRECTORY"
+        return 4
+    elif ! echo "$launcher_result" | grep -q "LAUNCHER_FOUND"; then
+        json_error "Échec lors de la recherche de ct-launcher.sh"
+        return 4
+    fi
+    
+    local ct_launcher_end=$(date +%s.%N)
+    local launcher_duration=$(echo "$ct_launcher_end - $ct_launcher_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "ct-launcher.sh exécuté en ${launcher_duration}s"
+    
+    # Stockage du résultat
+    echo "$launcher_result" > /tmp/ssh_workflow_ct_launcher_$$
+    echo "$launcher_duration" > /tmp/ssh_workflow_ct_launcher_time_$$
+    
+    return 0
+}
+
 execute_session_closure() {
     local closure_start=$(date +%s.%N)
     
@@ -489,7 +543,7 @@ execute_session_closure() {
 execute_workflow() {
     local workflow_start=$(date +%s.%N)
     local steps_completed=0
-    local total_steps=6  # Ajout des étapes de trigger
+    local total_steps=7  # Ajout de l'étape ct-launcher
     
     [[ "$QUIET_MODE" == false ]] && json_info "Début du workflow SSH vers $USERNAME@$HOST:$TARGET_DIRECTORY"
     
@@ -523,30 +577,40 @@ execute_workflow() {
     ((steps_completed++))
     [[ "$DEBUG_MODE" == true ]] && json_success "Étape 2/6 : Navigation répertoire réussie"
     
-    # ÉTAPE 3 : Affichage récursif
-    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 3/6 : Exploration récursive du contenu"
-    if ! execute_recursive_listing; then
-        ssh_session_close_trigger "listing_failed"
-        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec affichage récursif"
+    # ÉTAPE 3 : Exécution de ct-launcher.sh via SSH
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 3/7 : Exécution de ct-launcher.sh via SSH"
+    if ! execute_ct_launcher; then
+        ssh_session_close_trigger "ct_launcher_failed"
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec exécution ct-launcher.sh"
         return 4
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 3/6 : Affichage récursif complété"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 3/7 : ct-launcher.sh exécuté avec succès"
     
-    # ÉTAPE 4 : Vérification d'état de session
-    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 4/6 : Vérification d'état de session"
-    ssh_session_status_check
-    ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 4/6 : État de session vérifié"
-    
-    # ÉTAPE 5 : TRIGGER DE FERMETURE DE SESSION
-    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 5/6 : Fermeture propre de session SSH"
-    if ! ssh_session_close_trigger "workflow_completed"; then
-        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec fermeture session SSH"
+    # ÉTAPE 4 : Affichage récursif
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 4/7 : Exploration récursive du contenu"
+    if ! execute_recursive_listing; then
+        ssh_session_close_trigger "listing_failed"
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec affichage récursif"
         return 5
     fi
     ((steps_completed++))
-    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 5/6 : Session SSH fermée proprement"
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 4/7 : Affichage récursif complété"
+    
+    # ÉTAPE 5 : Vérification d'état de session
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 5/7 : Vérification d'état de session"
+    ssh_session_status_check
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 5/7 : État de session vérifié"
+    
+    # ÉTAPE 6 : TRIGGER DE FERMETURE DE SESSION
+    [[ "$DEBUG_MODE" == true ]] && json_info "Étape 6/7 : Fermeture propre de session SSH"
+    if ! ssh_session_close_trigger "workflow_completed"; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec fermeture session SSH"
+        return 6
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 6/7 : Session SSH fermée proprement"
     
     # Génération du JSON de succès
     generate_success_json $steps_completed $total_steps "$workflow_start"
@@ -572,6 +636,8 @@ generate_success_json() {
     local connection_time=$(cat /tmp/ssh_workflow_connection_time_$$ 2>/dev/null || echo "0.00")
     local navigation_result=$(cat /tmp/ssh_workflow_navigation_$$ 2>/dev/null || echo "{}")
     local navigation_time=$(cat /tmp/ssh_workflow_navigation_time_$$ 2>/dev/null || echo "0.00")
+    local ct_launcher_result=$(cat /tmp/ssh_workflow_ct_launcher_$$ 2>/dev/null || echo "{}")
+    local ct_launcher_time=$(cat /tmp/ssh_workflow_ct_launcher_time_$$ 2>/dev/null || echo "0.00")
     local listing_result=$(cat /tmp/ssh_workflow_listing_$$ 2>/dev/null || echo "{}")
     local listing_time=$(cat /tmp/ssh_workflow_listing_time_$$ 2>/dev/null || echo "0.00")
     local closure_result=$(cat /tmp/ssh_workflow_closure_$$ 2>/dev/null || echo "{}")
@@ -595,6 +661,12 @@ generate_success_json() {
             "target_directory": "$TARGET_DIRECTORY",
             "details": $navigation_result
         },
+        "ct_launcher": {
+            "duration": "${ct_launcher_time}s",
+            "script": "$CT_LAUNCHER_SCRIPT",
+            "target_directory": "$TARGET_DIRECTORY",
+            "details": $ct_launcher_result
+        },
         "listing": {
             "duration": "${listing_time}s",
             "recursive": true,
@@ -609,6 +681,7 @@ generate_success_json() {
         "total_time": "${execution_time}s",
         "connection_time": "${connection_time}s",
         "navigation_time": "${navigation_time}s",
+        "ct_launcher_time": "${ct_launcher_time}s",
         "listing_time": "${listing_time}s",
         "closure_time": "${closure_time}s"
     }
