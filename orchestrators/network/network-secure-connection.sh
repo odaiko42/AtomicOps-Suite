@@ -347,7 +347,14 @@ validate_prerequisites() {
         case "$CONNECTION_TYPE" in
             ssh|scp) TARGET_PORT=22 ;;
             ftp) TARGET_PORT=21 ;;
-            http) TARGET_PORT=80 ;;
+            http)
+                # Détecter HTTPS vs HTTP pour le port par défaut
+                if [[ "$HTTP_ENDPOINT" == https://* ]]; then
+                    TARGET_PORT=443
+                else
+                    TARGET_PORT=80
+                fi
+                ;;
         esac
     fi
     
@@ -572,8 +579,8 @@ orchestrate_http_connection() {
         --timeout "$CONNECTION_TIMEOUT"
     )
     
-    if [[ $VERIFY_HOST_KEY -eq 1 ]]; then
-        http_args+=(--verify-ssl)
+    if [[ $VERIFY_HOST_KEY -eq 0 ]]; then
+        http_args+=(--no-verify-ssl)
     fi
     
     local http_result
