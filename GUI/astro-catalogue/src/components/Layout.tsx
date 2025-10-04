@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NavLink } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
   const navigationItems = [
     { icon: Home, label: "Dashboard", path: "/" },
@@ -87,7 +88,8 @@ export default function Layout() {
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <h1 className="text-xl font-semibold text-foreground">Script Catalogue Manager</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
             <NavLink to="/settings" className="transition-opacity hover:opacity-80">
               <Avatar className="h-9 w-9 ring-2 ring-primary/20">
                 <AvatarImage src="/placeholder.svg" alt="Photo de profil" />

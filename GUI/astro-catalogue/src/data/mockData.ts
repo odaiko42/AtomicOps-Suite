@@ -442,7 +442,7 @@ const sshScripts: Script[] = [
     level: 0,
     status: 'stable',
     complexity: 'low',
-    path: '/root/atomics/network/generate-ssh.keypair.sh',
+    path: '/root/atomics/generate-ssh.keypair.sh',
     lastModified: new Date('2024-03-01').toISOString(),
     tags: ['ssh', 'security', 'keys', 'authentication'],
     functions: [
@@ -539,6 +539,153 @@ const sshScripts: Script[] = [
     ],
     dependencies: []
   },
+  {
+    id: 'ssh_006',
+    name: 'execute-ssh.remote.sh',
+    description: 'Exécute une commande ou script sur un hôte distant via SSH',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/network/execute-ssh.remote.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'remote', 'execution', 'command'],
+    functions: [
+      {
+        name: 'execute_remote_command',
+        description: 'Exécute commande distante avec gestion timeout et retry',
+        inputs: ['host', 'user', 'command', 'timeout', 'identity_file'],
+        outputs: ['exit_code', 'stdout', 'stderr', 'execution_time']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_007',
+    name: 'copy-file.remote.sh',
+    description: 'Copie de fichiers vers/depuis un hôte distant via SCP/SFTP',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/network/copy-file.remote.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'scp', 'transfer', 'files'],
+    functions: [
+      {
+        name: 'copy_remote_file',
+        description: 'Transfert sécurisé avec validation intégrité',
+        inputs: ['source', 'destination', 'host', 'user', 'direction'],
+        outputs: ['transfer_status', 'bytes_transferred', 'checksum_validated']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_008',
+    name: 'scp-transfer.sh',
+    description: 'Transfert de fichiers sécurisé via SCP avec gestion d\'erreurs avancée',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/network/scp-transfer.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['scp', 'transfer', 'secure', 'files'],
+    functions: [
+      {
+        name: 'scp_transfer_file',
+        description: 'Transfert SCP avec retry et validation',
+        inputs: ['source', 'destination', 'host', 'user', 'preserve_permissions'],
+        outputs: ['transfer_status', 'file_size', 'transfer_time']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_009',
+    name: 'ssh-connect.sh',
+    description: 'Établit une connexion SSH interactive ou non-interactive',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/network/ssh-connect.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'connection', 'interactive', 'session'],
+    functions: [
+      {
+        name: 'establish_ssh_connection',
+        description: 'Connexion SSH avec options configurables',
+        inputs: ['host', 'user', 'port', 'identity_file', 'interactive_mode'],
+        outputs: ['connection_established', 'session_id', 'connection_time']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_010',
+    name: 'ssh-execute-command.sh',
+    description: 'Exécution de commandes SSH avec gestion avancée des options',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/network/ssh-execute-command.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'command', 'execution', 'remote'],
+    functions: [
+      {
+        name: 'execute_ssh_command',
+        description: 'Exécution commande SSH avec options avancées',
+        inputs: ['host', 'user', 'command', 'ssh_options', 'output_format'],
+        outputs: ['exit_code', 'command_output', 'execution_duration']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_011',
+    name: 'deploy-script.remote.sh',
+    description: 'Déploie et exécute un script sur un hôte distant',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/atomics/network/deploy-script.remote.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['deploy', 'script', 'remote', 'automation'],
+    functions: [
+      {
+        name: 'deploy_and_execute_script',
+        description: 'Copie, déploie et exécute script distant',
+        inputs: ['script_path', 'remote_host', 'user', 'execution_params'],
+        outputs: ['deployment_status', 'execution_result', 'remote_script_path']
+      }
+    ],
+    dependencies: ['ssh_007', 'ssh_006'] // copy-file.remote.sh + execute-ssh.remote.sh
+  },
+  {
+    id: 'ssh_012',
+    name: 'execute-workflow.remote.sh',
+    description: 'Exécute un workflow complet (séquence de scripts) sur hôte distant',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/atomics/network/execute-workflow.remote.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['workflow', 'orchestration', 'remote', 'sequence'],
+    functions: [
+      {
+        name: 'execute_remote_workflow',
+        description: 'Exécution séquentielle de scripts distants',
+        inputs: ['workflow_config', 'remote_host', 'user', 'rollback_enabled'],
+        outputs: ['workflow_status', 'step_results', 'execution_log']
+      }
+    ],
+    dependencies: ['ssh_011', 'ssh_006', 'ssh_005'] // deploy-script + execute + check-connection
+  },
 
   // === ORCHESTRATEURS SSH (NIVEAU 1) ===
   {
@@ -560,7 +707,7 @@ const sshScripts: Script[] = [
         outputs: ['access_configured', 'key_deployed', 'connection_validated']
       }
     ],
-    dependencies: ['ssh_001', 'ssh_002', 'ssh_005']
+    dependencies: ['ssh_001', 'ssh_002', 'ssh_005'] // generate-keypair + add-key + check-connection
   },
   {
     id: 'ssh_orch_002',
@@ -581,7 +728,7 @@ const sshScripts: Script[] = [
         outputs: ['access_revoked', 'backup_created', 'revocation_verified']
       }
     ],
-    dependencies: ['ssh_003', 'ssh_004', 'ssh_005']
+    dependencies: ['ssh_003', 'ssh_004', 'ssh_005'] // remove-key + list-keys + check-connection
   },
   {
     id: 'ssh_orch_003',
@@ -602,7 +749,7 @@ const sshScripts: Script[] = [
         outputs: ['audit_report', 'security_analysis', 'recommendations']
       }
     ],
-    dependencies: ['ssh_004', 'ssh_005']
+    dependencies: ['ssh_004', 'ssh_005'] // list-keys + check-connection
   },
   {
     id: 'ssh_orch_004',
@@ -623,7 +770,7 @@ const sshScripts: Script[] = [
         outputs: ['migration_completed', 'keys_migrated', 'validation_passed']
       }
     ],
-    dependencies: ['ssh_004', 'ssh_002', 'ssh_005']
+    dependencies: ['ssh_004', 'ssh_002', 'ssh_005'] // list-keys + add-key + check-connection
   },
   {
     id: 'ssh_orch_005',
@@ -644,7 +791,7 @@ const sshScripts: Script[] = [
         outputs: ['rotation_completed', 'servers_success', 'rollback_executed']
       }
     ],
-    dependencies: ['ssh_001', 'ssh_002', 'ssh_003', 'ssh_005']
+    dependencies: ['ssh_001', 'ssh_002', 'ssh_003', 'ssh_005'] // generate + add + remove + check
   },
   {
     id: 'ssh_orch_006',
@@ -665,7 +812,7 @@ const sshScripts: Script[] = [
         outputs: ['deployment_completed', 'servers_success', 'deployment_report']
       }
     ],
-    dependencies: ['ssh_002', 'ssh_005']
+    dependencies: ['ssh_002', 'ssh_005'] // add-key + check-connection
   }
 ];
 

@@ -790,7 +790,8 @@ parse_args() {
 
 main() {
     # Configuration du piégeage des signaux pour nettoyage SSH et fichiers temporaires
-    trap 'ssh_session_close_trigger "interrupted"; cleanup_temp_files' EXIT INT TERM
+    trap 'cleanup_temp_files' EXIT
+    trap 'ssh_session_close_trigger "interrupted"; cleanup_temp_files; exit 130' INT TERM
     
     # Parsing des arguments
     parse_args "$@"
