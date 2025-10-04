@@ -1,0 +1,596 @@
+#!/usr/bin/env bash
+
+#===============================================================================
+# SSH Default Workflow - Orchestrateur de connexion SSH complète
+#===============================================================================
+# Description : Workflow par défaut pour connexion SSH avec exploration de répertoire
+# Niveau : 1 (Orchestrateur)
+# Catégorie : network
+# Dépendances : ssh-connect.sh, ssh-execute-command.sh
+# 
+# Ce script orchestre une session SSH complète :
+# 1. Connexion SSH sécurisée sur 192.168.88.50
+# 2. Navigation vers le répertoire /root/script  
+# 3. Affichage récursif du contenu
+# 4. Fermeture propre de la session SSH
+#
+# Conforme à la méthodologie AtomicOps-Suite - Niveau 1
+#===============================================================================
+
+set -euo pipefail
+
+# === CONFIGURATION GLOBALE ===
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(realpath "$SCRIPT_DIR/../../../lib")"
+ATOMIC_DIR="$(realpath "$SCRIPT_DIR/../../atomic")"
+
+# === SOURCING DES BIBLIOTHÈQUES ===
+# Note: Utilisation des fonctions JSON basiques intégrées pour éviter les dépendances
+# source "$LIB_DIR/lib-common.sh"
+# source "$LIB_DIR/lib-json.sh"
+
+# === FONCTIONS JSON BASIQUES INTÉGRÉES ===
+json_info() { echo "[INFO] $1" >&2; }
+json_error() { echo "[ERROR] $1" >&2; }
+json_success() { echo "[SUCCESS] $1" >&2; }  
+json_debug() { [[ "$DEBUG_MODE" == true ]] && echo "[DEBUG] $1" >&2; }
+
+# === CONSTANTES DU WORKFLOW ===
+readonly DEFAULT_HOST="192.168.88.50"
+readonly DEFAULT_USER="root" 
+readonly DEFAULT_DIRECTORY="/root/script"
+readonly WORKFLOW_NAME="SSH Default Workflow"
+
+# === VARIABLES GLOBALES ===
+QUIET_MODE=false
+FORCE_MODE=false
+DEBUG_MODE=false
+HOST="$DEFAULT_HOST"
+USERNAME="$DEFAULT_USER"
+SSH_KEY=""
+CONNECTION_TIMEOUT=30
+TARGET_DIRECTORY="$DEFAULT_DIRECTORY"
+ATOMIC_SSH_CONNECT=""
+ATOMIC_SSH_EXECUTE=""
+
+#===============================================================================
+# FONCTIONS D'AIDE ET CONFIGURATION
+#===============================================================================
+
+show_help() {
+    cat << EOF
+$WORKFLOW_NAME - Orchestrateur de connexion SSH complète
+
+USAGE:
+    $(basename "$0") [OPTIONS]
+
+DESCRIPTION:
+    Orchestre un workflow SSH complet incluant :
+    - Connexion SSH sécurisée sur le serveur cible
+    - Navigation vers le répertoire /root/script
+    - Affichage récursif du contenu du répertoire
+    - Fermeture propre de la session SSH
+
+OPTIONS:
+    -h, --host HOST         Serveur SSH cible (défaut: $DEFAULT_HOST)
+    -u, --user USER         Utilisateur SSH (défaut: $DEFAULT_USER)
+    -k, --key PATH          Chemin vers la clé SSH privée (optionnel)
+    -t, --timeout SEC       Timeout de connexion en secondes (défaut: $CONNECTION_TIMEOUT)
+    -d, --directory PATH    Répertoire cible à explorer (défaut: $DEFAULT_DIRECTORY)
+    
+    --quiet                 Mode silencieux (pas de sortie verbose)
+    --force                 Force l'exécution même si des validations échouent
+    --debug                 Active le mode debug avec traces détaillées
+    --help                  Affiche cette aide
+
+EXEMPLES:
+    # Workflow par défaut
+    $(basename "$0")
+    
+    # Avec serveur personnalisé
+    $(basename "$0") --host 192.168.1.100 --user admin
+    
+    # Avec clé SSH spécifique
+    $(basename "$0") --key ~/.ssh/id_rsa_server
+    
+    # Mode debug avec répertoire personnalisé
+    $(basename "$0") --debug --directory /home/user/projects
+
+SORTIE JSON:
+    {
+        "success": true|false,
+        "workflow": "$WORKFLOW_NAME",
+        "target": "user@host:directory", 
+        "steps_completed": number,
+        "total_steps": 4,
+        "execution_time": "X.XXs",
+        "results": {
+            "connection": {...},
+            "navigation": {...},
+            "listing": {...},
+            "disconnection": {...}
+        },
+        "error": "message si échec"
+    }
+
+CODES DE RETOUR:
+    0 : Succès - Workflow complété avec succès
+    1 : Erreur de paramètres ou de validation
+    2 : Échec de connexion SSH
+    3 : Échec de navigation dans le répertoire
+    4 : Échec d'affichage récursif
+    5 : Échec de fermeture de session
+
+CONFORMITÉ:
+    - Méthodologie AtomicOps-Suite Niveau 1 (Orchestrateur)
+    - Utilise les scripts atomiques ssh-connect.sh et ssh-execute-command.sh
+    - Sortie JSON standardisée avec métriques de performance
+    - Gestion d'erreurs robuste avec codes de retour spécifiques
+EOF
+}
+
+#===============================================================================
+# FONCTIONS DE VALIDATION
+#===============================================================================
+
+validate_parameters() {
+    local errors=0
+    
+    # Validation de l'host
+    if [[ -z "$HOST" ]]; then
+        json_error "Host SSH obligatoire"
+        ((errors++))
+    fi
+    
+    # Validation du username
+    if [[ -z "$USERNAME" ]]; then
+        json_error "Nom d'utilisateur SSH obligatoire" 
+        ((errors++))
+    fi
+    
+    # Validation de la clé SSH si spécifiée
+    if [[ -n "$SSH_KEY" ]] && [[ ! -f "$SSH_KEY" ]]; then
+        json_error "Clé SSH non trouvée : $SSH_KEY"
+        ((errors++))
+    fi
+    
+    # Validation du timeout
+    if ! [[ "$CONNECTION_TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$CONNECTION_TIMEOUT" -lt 5 ]]; then
+        json_error "Timeout doit être un nombre >= 5 secondes"
+        ((errors++))
+    fi
+    
+    return $errors
+}
+
+check_dependencies() {
+    local missing_deps=()
+    
+    # Vérification des scripts atomiques requis - utilisation du chemin correct
+    local project_root="$(realpath "$SCRIPT_DIR/../../../../")"
+    local ssh_connect="$project_root/atomics/network/ssh-connect.sh"
+    local ssh_execute="$project_root/atomics/network/ssh-execute-command.sh"
+    
+    [[ ! -f "$ssh_connect" ]] && missing_deps+=("ssh-connect.sh at $ssh_connect")
+    [[ ! -f "$ssh_execute" ]] && missing_deps+=("ssh-execute-command.sh at $ssh_execute")
+    
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        json_error "Scripts atomiques manquants : ${missing_deps[*]}"
+        return 1
+    fi
+    
+    # Stockage des chemins pour utilisation ultérieure
+    ATOMIC_SSH_CONNECT="$ssh_connect"
+    ATOMIC_SSH_EXECUTE="$ssh_execute"
+    
+    return 0
+}
+
+#===============================================================================
+# FONCTIONS WORKFLOW PRINCIPAL
+#===============================================================================
+
+execute_ssh_connection() {
+    local connection_start=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Début connexion SSH vers $USERNAME@$HOST"
+    
+    # Construction des arguments pour ssh-connect
+    local connect_args=(
+        "--host" "$HOST"
+        "--user" "$USERNAME" 
+        "--timeout" "$CONNECTION_TIMEOUT"
+    )
+    
+    # Ajout de la clé SSH si spécifiée
+    [[ -n "$SSH_KEY" ]] && connect_args+=("--key" "$SSH_KEY")
+    
+    # Ajout des flags de mode
+    [[ "$QUIET_MODE" == true ]] && connect_args+=("--quiet")
+    [[ "$DEBUG_MODE" == true ]] && connect_args+=("--debug")
+    
+    # Exécution de la connexion SSH
+    local connection_result
+    if ! connection_result=$("$ATOMIC_SSH_CONNECT" "${connect_args[@]}" 2>&1); then
+        json_error "Échec connexion SSH : $connection_result"
+        return 2
+    fi
+    
+    local connection_end=$(date +%s.%N)
+    local connection_duration=$(echo "$connection_end - $connection_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Connexion SSH établie en ${connection_duration}s"
+    
+    # Stockage du résultat pour le JSON final
+    echo "$connection_result" > /tmp/ssh_workflow_connection_$$
+    echo "$connection_duration" > /tmp/ssh_workflow_connection_time_$$
+    
+    return 0
+}
+
+execute_directory_navigation() {
+    local nav_start=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Navigation vers le répertoire $TARGET_DIRECTORY"
+    
+    # Construction de la commande de navigation et vérification
+    local nav_command="cd '$TARGET_DIRECTORY' && pwd && echo 'NAVIGATION_SUCCESS'"
+    
+    # Construction des arguments pour ssh-execute-command
+    local execute_args=(
+        "--host" "$HOST"
+        "--user" "$USERNAME"
+        "--command" "$nav_command"
+        "--timeout" "$CONNECTION_TIMEOUT"
+    )
+    
+    # Ajout de la clé SSH si spécifiée
+    [[ -n "$SSH_KEY" ]] && execute_args+=("--key" "$SSH_KEY")
+    
+    # Ajout des flags de mode
+    [[ "$QUIET_MODE" == true ]] && execute_args+=("--quiet")
+    [[ "$DEBUG_MODE" == true ]] && execute_args+=("--debug")
+    
+    # Exécution de la navigation
+    local nav_result
+    if ! nav_result=$("$ATOMIC_SSH_EXECUTE" "${execute_args[@]}" 2>&1); then
+        json_error "Échec navigation répertoire : $nav_result"
+        return 3
+    fi
+    
+    # Vérification que la navigation a réussi
+    if ! echo "$nav_result" | grep -q "NAVIGATION_SUCCESS"; then
+        json_error "Répertoire $TARGET_DIRECTORY inaccessible"
+        return 3
+    fi
+    
+    local nav_end=$(date +%s.%N)
+    local nav_duration=$(echo "$nav_end - $nav_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Navigation complétée en ${nav_duration}s"
+    
+    # Stockage du résultat
+    echo "$nav_result" > /tmp/ssh_workflow_navigation_$$
+    echo "$nav_duration" > /tmp/ssh_workflow_navigation_time_$$
+    
+    return 0
+}
+
+execute_recursive_listing() {
+    local listing_start=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Affichage récursif du répertoire $TARGET_DIRECTORY"
+    
+    # Construction de la commande d'affichage récursif avec informations détaillées
+    local listing_command="cd '$TARGET_DIRECTORY' && echo '=== CONTENU RÉCURSIF DE $TARGET_DIRECTORY ===' && ls -laR && echo '=== FIN AFFICHAGE RÉCURSIF ===' && echo 'LISTING_SUCCESS'"
+    
+    # Construction des arguments pour ssh-execute-command
+    local execute_args=(
+        "--host" "$HOST"
+        "--user" "$USERNAME"
+        "--command" "$listing_command"
+        "--timeout" "$((CONNECTION_TIMEOUT * 2))"  # Timeout plus long pour ls -R
+    )
+    
+    # Ajout de la clé SSH si spécifiée
+    [[ -n "$SSH_KEY" ]] && execute_args+=("--key" "$SSH_KEY")
+    
+    # Ajout des flags de mode
+    [[ "$QUIET_MODE" == true ]] && execute_args+=("--quiet")
+    [[ "$DEBUG_MODE" == true ]] && execute_args+=("--debug")
+    
+    # Exécution de l'affichage récursif
+    local listing_result
+    if ! listing_result=$("$ATOMIC_SSH_EXECUTE" "${execute_args[@]}" 2>&1); then
+        json_error "Échec affichage récursif : $listing_result"
+        return 4
+    fi
+    
+    # Vérification que l'affichage a réussi
+    if ! echo "$listing_result" | grep -q "LISTING_SUCCESS"; then
+        json_error "Échec lors de l'affichage récursif du répertoire"
+        return 4
+    fi
+    
+    local listing_end=$(date +%s.%N)
+    local listing_duration=$(echo "$listing_end - $listing_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Affichage récursif complété en ${listing_duration}s"
+    
+    # Stockage du résultat
+    echo "$listing_result" > /tmp/ssh_workflow_listing_$$
+    echo "$listing_duration" > /tmp/ssh_workflow_listing_time_$$
+    
+    return 0
+}
+
+execute_session_closure() {
+    local closure_start=$(date +%s.%N)
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Fermeture propre de la session SSH"
+    
+    # Construction de la commande de fermeture propre
+    local closure_command="echo 'Session SSH fermée proprement' && exit 0"
+    
+    # Construction des arguments pour ssh-execute-command
+    local execute_args=(
+        "--host" "$HOST"
+        "--user" "$USERNAME"
+        "--command" "$closure_command"
+        "--timeout" "10"  # Timeout court pour la fermeture
+    )
+    
+    # Ajout de la clé SSH si spécifiée
+    [[ -n "$SSH_KEY" ]] && execute_args+=("--key" "$SSH_KEY")
+    
+    # Ajout des flags de mode
+    [[ "$QUIET_MODE" == true ]] && execute_args+=("--quiet")
+    [[ "$DEBUG_MODE" == true ]] && execute_args+=("--debug")
+    
+    # Exécution de la fermeture (peut échouer naturellement)
+    local closure_result
+    closure_result=$("$ATOMIC_SSH_EXECUTE" "${execute_args[@]}" 2>&1 || echo "Session fermée")
+    
+    local closure_end=$(date +%s.%N)
+    local closure_duration=$(echo "$closure_end - $closure_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    [[ "$DEBUG_MODE" == true ]] && json_debug "Session SSH fermée en ${closure_duration}s"
+    
+    # Stockage du résultat
+    echo "$closure_result" > /tmp/ssh_workflow_closure_$$
+    echo "$closure_duration" > /tmp/ssh_workflow_closure_time_$$
+    
+    return 0
+}
+
+#===============================================================================
+# FONCTION PRINCIPALE D'ORCHESTRATION
+#===============================================================================
+
+execute_workflow() {
+    local workflow_start=$(date +%s.%N)
+    local steps_completed=0
+    local total_steps=4
+    
+    [[ "$QUIET_MODE" == false ]] && json_info "Début du workflow SSH vers $USERNAME@$HOST:$TARGET_DIRECTORY"
+    
+    # ÉTAPE 1 : Connexion SSH
+    if ! execute_ssh_connection; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec connexion SSH"
+        return 2
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 1/4 : Connexion SSH réussie"
+    
+    # ÉTAPE 2 : Navigation vers le répertoire
+    if ! execute_directory_navigation; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec navigation répertoire"
+        return 3
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 2/4 : Navigation répertoire réussie"
+    
+    # ÉTAPE 3 : Affichage récursif
+    if ! execute_recursive_listing; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec affichage récursif"
+        return 4
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 3/4 : Affichage récursif réussi"
+    
+    # ÉTAPE 4 : Fermeture de session
+    if ! execute_session_closure; then
+        generate_error_json $? $steps_completed $total_steps "$workflow_start" "Échec fermeture session"
+        return 5
+    fi
+    ((steps_completed++))
+    [[ "$DEBUG_MODE" == true ]] && json_success "Étape 4/4 : Fermeture session réussie"
+    
+    # Génération du JSON de succès
+    generate_success_json $steps_completed $total_steps "$workflow_start"
+    
+    [[ "$QUIET_MODE" == false ]] && json_success "Workflow SSH complété avec succès"
+    
+    return 0
+}
+
+#===============================================================================
+# FONCTIONS DE GÉNÉRATION JSON
+#===============================================================================
+
+generate_success_json() {
+    local steps_completed=$1
+    local total_steps=$2
+    local workflow_start=$3
+    local workflow_end=$(date +%s.%N)
+    local execution_time=$(echo "$workflow_end - $workflow_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    # Lecture des résultats stockés
+    local connection_result=$(cat /tmp/ssh_workflow_connection_$$ 2>/dev/null || echo "{}")
+    local connection_time=$(cat /tmp/ssh_workflow_connection_time_$$ 2>/dev/null || echo "0.00")
+    local navigation_result=$(cat /tmp/ssh_workflow_navigation_$$ 2>/dev/null || echo "{}")
+    local navigation_time=$(cat /tmp/ssh_workflow_navigation_time_$$ 2>/dev/null || echo "0.00")
+    local listing_result=$(cat /tmp/ssh_workflow_listing_$$ 2>/dev/null || echo "{}")
+    local listing_time=$(cat /tmp/ssh_workflow_listing_time_$$ 2>/dev/null || echo "0.00")
+    local closure_result=$(cat /tmp/ssh_workflow_closure_$$ 2>/dev/null || echo "{}")
+    local closure_time=$(cat /tmp/ssh_workflow_closure_time_$$ 2>/dev/null || echo "0.00")
+    
+    cat << EOF
+{
+    "success": true,
+    "workflow": "$WORKFLOW_NAME",
+    "target": "$USERNAME@$HOST:$TARGET_DIRECTORY",
+    "steps_completed": $steps_completed,
+    "total_steps": $total_steps,
+    "execution_time": "${execution_time}s",
+    "results": {
+        "connection": {
+            "duration": "${connection_time}s",
+            "details": $connection_result
+        },
+        "navigation": {
+            "duration": "${navigation_time}s", 
+            "target_directory": "$TARGET_DIRECTORY",
+            "details": $navigation_result
+        },
+        "listing": {
+            "duration": "${listing_time}s",
+            "recursive": true,
+            "details": $listing_result
+        },
+        "disconnection": {
+            "duration": "${closure_time}s",
+            "details": $closure_result
+        }
+    },
+    "performance": {
+        "total_time": "${execution_time}s",
+        "connection_time": "${connection_time}s",
+        "navigation_time": "${navigation_time}s",
+        "listing_time": "${listing_time}s",
+        "closure_time": "${closure_time}s"
+    }
+}
+EOF
+    
+    # Nettoyage des fichiers temporaires
+    cleanup_temp_files
+}
+
+generate_error_json() {
+    local exit_code=$1
+    local steps_completed=$2
+    local total_steps=$3
+    local workflow_start=$4
+    local error_message=$5
+    local workflow_end=$(date +%s.%N)
+    local execution_time=$(echo "$workflow_end - $workflow_start" | bc -l 2>/dev/null || echo "0.00")
+    
+    cat << EOF
+{
+    "success": false,
+    "workflow": "$WORKFLOW_NAME",
+    "target": "$USERNAME@$HOST:$TARGET_DIRECTORY",
+    "steps_completed": $steps_completed,
+    "total_steps": $total_steps,
+    "execution_time": "${execution_time}s",
+    "error": "$error_message",
+    "exit_code": $exit_code
+}
+EOF
+    
+    # Nettoyage des fichiers temporaires
+    cleanup_temp_files
+}
+
+cleanup_temp_files() {
+    rm -f /tmp/ssh_workflow_*_$$ 2>/dev/null || true
+}
+
+#===============================================================================
+# GESTION DES ARGUMENTS
+#===============================================================================
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--host)
+                HOST="$2"
+                shift 2
+                ;;
+            -u|--user)
+                USERNAME="$2"
+                shift 2
+                ;;
+            -k|--key)
+                SSH_KEY="$2"
+                shift 2
+                ;;
+            -t|--timeout)
+                CONNECTION_TIMEOUT="$2"
+                shift 2
+                ;;
+            -d|--directory)
+                TARGET_DIRECTORY="$2"
+                shift 2
+                ;;
+            --quiet)
+                QUIET_MODE=true
+                shift
+                ;;
+            --force)
+                FORCE_MODE=true
+                shift
+                ;;
+            --debug)
+                DEBUG_MODE=true
+                shift
+                ;;
+            --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                json_error "Argument inconnu : $1"
+                show_help >&2
+                exit 1
+                ;;
+        esac
+    done
+}
+
+#===============================================================================
+# FONCTION PRINCIPALE
+#===============================================================================
+
+main() {
+    # Configuration du piégeage des signaux pour nettoyage
+    trap cleanup_temp_files EXIT INT TERM
+    
+    # Parsing des arguments
+    parse_args "$@"
+    
+    # Validation des paramètres
+    if ! validate_parameters; then
+        exit 1
+    fi
+    
+    # Vérification des dépendances
+    if ! check_dependencies; then
+        exit 1
+    fi
+    
+    # Exécution du workflow principal
+    execute_workflow
+    local exit_code=$?
+    
+    # Nettoyage final
+    cleanup_temp_files
+    
+    exit $exit_code
+}
+
+# Point d'entrée du script
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
