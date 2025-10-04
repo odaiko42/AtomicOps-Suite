@@ -288,75 +288,238 @@ export const useScriptWorkflow = () => {
       status: 'idle'
     };
 
+    // === SCRIPTS ATOMIQUES SUPPLÉMENTAIRES POUR INTERACTIONS ===
+    const sshAddKey: ScriptInstance = {
+      id: 'ssh_add_key',
+      definitionId: 'ssh_002', // add-ssh.key.authorized.sh
+      position: { x: 300, y: 100 },
+      parameters: new Map([
+        ['target_user', 'deploy'],
+        ['host', 'prod-server.com']
+      ]),
+      status: 'idle'
+    };
+
+    const sshExecuteRemote: ScriptInstance = {
+      id: 'ssh_execute',
+      definitionId: 'ssh_006', // execute-ssh.remote.sh
+      position: { x: 700, y: 500 },
+      parameters: new Map([
+        ['host', 'prod-server.com'],
+        ['user', 'deploy'],
+        ['command', 'systemctl status sshd'],
+        ['timeout', '60']
+      ]),
+      status: 'idle'
+    };
+
+    const sshCopyFile: ScriptInstance = {
+      id: 'ssh_copy',
+      definitionId: 'ssh_007', // copy-file.remote.sh
+      position: { x: 300, y: 400 },
+      parameters: new Map([
+        ['source', '/local/config.txt'],
+        ['destination', '/remote/config.txt'],
+        ['host', 'prod-server.com'],
+        ['user', 'deploy']
+      ]),
+      status: 'idle'
+    };
+
+    const sshDeployScript: ScriptInstance = {
+      id: 'ssh_deploy_script',
+      definitionId: 'ssh_011', // deploy-script.remote.sh
+      position: { x: 1100, y: 100 },
+      parameters: new Map([
+        ['script_path', '/local/setup.sh'],
+        ['remote_host', 'prod-server.com'],
+        ['remote_user', 'deploy']
+      ]),
+      status: 'idle'
+    };
+
+    const sshRemoveKey: ScriptInstance = {
+      id: 'ssh_remove_key',
+      definitionId: 'ssh_003', // remove-ssh.key.authorized.sh
+      position: { x: 700, y: 650 },
+      parameters: new Map([
+        ['key_fingerprint', 'SHA256:abc123...'],
+        ['target_user', 'deploy'],
+        ['host', 'prod-server.com']
+      ]),
+      status: 'idle'
+    };
+
     // Connexions pour workflow SSH
     const sshConnections: ScriptConnection[] = [
-      // generate-ssh -> setup-ssh.access
+      // === PHASE 1: GÉNÉRATION ET DÉPLOIEMENT INITIAL ===
+      // generate-ssh -> add-key (clé publique)
       {
         id: 'ssh_conn_1',
         sourceScriptId: 'ssh_generate',
-        sourceSocket: 'private_key_path',
-        targetScriptId: 'ssh_setup',
-        targetSocket: 'trigger',
+        sourceSocket: 'public_key_path',
+        targetScriptId: 'ssh_add_key',
+        targetSocket: 'public_key',
         type: ScriptDataType.FILE
       },
-      // list-ssh -> setup-ssh.access
+      // add-key -> check-connection (valider déploiement)
       {
-        id: 'ssh_conn_2', 
+        id: 'ssh_conn_2',
+        sourceScriptId: 'ssh_add_key',
+        sourceSocket: 'key_added',
+        targetScriptId: 'ssh_check',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // generate-ssh -> setup-ssh (clé privée pour orchestrateur)
+      {
+        id: 'ssh_conn_3',
+        sourceScriptId: 'ssh_generate',
+        sourceSocket: 'private_key_path',
+        targetScriptId: 'ssh_setup',
+        targetSocket: 'identity_file',
+        type: ScriptDataType.FILE
+      },
+      
+      // === PHASE 2: VALIDATION ET LISTING ===
+      // check-connection -> list-keys (si connexion OK)
+      {
+        id: 'ssh_conn_4',
+        sourceScriptId: 'ssh_check',
+        sourceSocket: 'connection_status',
+        targetScriptId: 'ssh_list',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // list-keys -> setup-ssh (inventaire existant)
+      {
+        id: 'ssh_conn_5', 
         sourceScriptId: 'ssh_list',
         sourceSocket: 'keys_list',
         targetScriptId: 'ssh_setup',
-        targetSocket: 'trigger',
+        targetSocket: 'existing_keys',
         type: ScriptDataType.JSON
       },
-      // setup-ssh -> audit-ssh
+      
+      // === PHASE 3: ORCHESTRATION NIVEAU 1 ===
+      // setup-ssh -> copy-file (déployer config)
       {
-        id: 'ssh_conn_3',
+        id: 'ssh_conn_6',
         sourceScriptId: 'ssh_setup',
         sourceSocket: 'access_configured',
+        targetScriptId: 'ssh_copy',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // copy-file -> execute-remote (config déployée, test commandes)
+      {
+        id: 'ssh_conn_7',
+        sourceScriptId: 'ssh_copy',
+        sourceSocket: 'transfer_status',
+        targetScriptId: 'ssh_execute',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // setup-ssh -> audit-ssh (lancer audit complet)
+      {
+        id: 'ssh_conn_8',
+        sourceScriptId: 'ssh_setup',
+        sourceSocket: 'key_deployed',
         targetScriptId: 'ssh_audit',
         targetSocket: 'trigger',
         type: ScriptDataType.STRING
       },
-      // setup-ssh -> rotate-ssh
+      
+      // === PHASE 4: DÉPLOIEMENT AVANCÉ ===
+      // execute-remote -> deploy-script (commandes OK, déployer scripts)
       {
-        id: 'ssh_conn_4',
-        sourceScriptId: 'ssh_setup',
-        sourceSocket: 'key_deployed',
-        targetScriptId: 'ssh_rotate',
+        id: 'ssh_conn_9',
+        sourceScriptId: 'ssh_execute',
+        sourceSocket: 'exit_code',
+        targetScriptId: 'ssh_deploy_script',
         targetSocket: 'trigger',
-        type: ScriptDataType.STRING
+        type: ScriptDataType.EXIT_CODE
       },
-      // check-ssh -> setup-ssh (validation)
+      // audit-ssh -> rotate-ssh (audit complet, rotation si nécessaire)
       {
-        id: 'ssh_conn_5',
-        sourceScriptId: 'ssh_check',
-        sourceSocket: 'connection_status',
-        targetScriptId: 'ssh_setup',
-        targetSocket: 'trigger',
-        type: ScriptDataType.STRING
-      },
-      // audit-ssh -> deploy-ssh (après validation)
-      {
-        id: 'ssh_conn_6',
+        id: 'ssh_conn_10',
         sourceScriptId: 'ssh_audit',
-        sourceSocket: 'audit_report',
-        targetScriptId: 'ssh_deploy',
-        targetSocket: 'trigger',
+        sourceSocket: 'security_analysis',
+        targetScriptId: 'ssh_rotate',
+        targetSocket: 'audit_results',
         type: ScriptDataType.JSON
       },
-      // rotate-ssh -> deploy-ssh (nouvelles clés)
+      
+      // === PHASE 5: DÉPLOIEMENT MULTI-SERVEURS ===
+      // deploy-script -> deploy-multiserver (script testé sur un serveur)
       {
-        id: 'ssh_conn_7',
+        id: 'ssh_conn_11',
+        sourceScriptId: 'ssh_deploy_script',
+        sourceSocket: 'deployment_status',
+        targetScriptId: 'ssh_deploy',
+        targetSocket: 'validation_result',
+        type: ScriptDataType.STRING
+      },
+      // rotate-ssh -> deploy-multiserver (nouvelles clés prêtes)
+      {
+        id: 'ssh_conn_12',
         sourceScriptId: 'ssh_rotate',
         sourceSocket: 'rotation_completed',
         targetScriptId: 'ssh_deploy',
+        targetSocket: 'new_keys_ready',
+        type: ScriptDataType.STRING
+      },
+      
+      // === PHASE 6: NETTOYAGE ET RÉVOCATION ===
+      // audit-ssh -> remove-key (clés obsolètes détectées)
+      {
+        id: 'ssh_conn_13',
+        sourceScriptId: 'ssh_audit',
+        sourceSocket: 'recommendations',
+        targetScriptId: 'ssh_remove_key',
+        targetSocket: 'cleanup_list',
+        type: ScriptDataType.JSON
+      },
+      // deploy-multiserver -> remove-key (déploiement terminé, nettoyage)
+      {
+        id: 'ssh_conn_14',
+        sourceScriptId: 'ssh_deploy',
+        sourceSocket: 'deployment_completed',
+        targetScriptId: 'ssh_remove_key',
         targetSocket: 'trigger',
         type: ScriptDataType.STRING
+      },
+      
+      // === CONNEXIONS DE FEEDBACK ===
+      // remove-key -> list-keys (vérifier suppression)
+      {
+        id: 'ssh_conn_15',
+        sourceScriptId: 'ssh_remove_key',
+        sourceSocket: 'key_removed',
+        targetScriptId: 'ssh_list',
+        targetSocket: 'revalidate',
+        type: ScriptDataType.STRING
+      },
+      // deploy-multiserver -> check-connection (validation finale)
+      {
+        id: 'ssh_conn_16',
+        sourceScriptId: 'ssh_deploy',
+        sourceSocket: 'servers_success',
+        targetScriptId: 'ssh_check',
+        targetSocket: 'final_validation',
+        type: ScriptDataType.JSON
       }
     ];
 
-    // Appliquer l'exemple SSH
-    setScripts([sshGenerate, sshList, sshCheck, sshSetup, sshAudit, sshRotate, sshDeploy]);
+    // Appliquer l'exemple SSH complet avec interactions
+    setScripts([
+      // Scripts atomiques niveau 0
+      sshGenerate, sshAddKey, sshList, sshCheck, sshCopyFile, sshExecuteRemote, sshRemoveKey,
+      // Scripts de déploiement niveau 0
+      sshDeployScript,
+      // Orchestrateurs niveau 1
+      sshSetup, sshAudit, sshRotate, sshDeploy
+    ]);
     setConnections(sshConnections);
     
     // Centrer la vue sur le workflow SSH
