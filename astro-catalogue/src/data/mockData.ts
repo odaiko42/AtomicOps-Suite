@@ -253,10 +253,104 @@ export const mockScripts: Script[] = [
   }
 ];
 
+// Ajout de scripts atomiques réalistes du projet
+const atomicScripts: Script[] = [
+  {
+    id: 'atomic_001',
+    name: 'check-network.connectivity.sh',
+    description: 'Vérifie la connectivité réseau vers des hôtes spécifiés',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/check-network.connectivity.sh',
+    lastModified: new Date('2024-02-01').toISOString(),
+    tags: ['network', 'connectivity', 'ping', 'monitoring'],
+    functions: [
+      {
+        name: 'test_connectivity',
+        description: 'Test de connectivité vers un hôte',
+        inputs: ['host', 'timeout'],
+        outputs: ['connection_status']
+      }
+    ]
+  },
+  {
+    id: 'atomic_002',
+    name: 'get-system.info.sh',
+    description: 'Collecte les informations système (OS, CPU, RAM)',
+    category: 'system',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/get-system.info.sh',
+    lastModified: new Date('2024-01-20').toISOString(),
+    tags: ['system', 'info', 'monitoring', 'hardware'],
+    functions: [
+      {
+        name: 'get_os_info',
+        description: 'Récupère les informations OS',
+        inputs: [],
+        outputs: ['os_name', 'os_version']
+      },
+      {
+        name: 'get_hardware_info',
+        description: 'Récupère les informations matérielles',
+        inputs: [],
+        outputs: ['cpu_info', 'memory_info']
+      }
+    ]
+  },
+  {
+    id: 'atomic_003',
+    name: 'backup-directory.sh',
+    description: 'Sauvegarde complète d\'un répertoire avec compression',
+    category: 'file',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/backup-directory.sh',
+    lastModified: new Date('2024-01-25').toISOString(),
+    tags: ['backup', 'compression', 'tar', 'archive'],
+    functions: [
+      {
+        name: 'create_backup',
+        description: 'Crée une archive tar.gz du répertoire',
+        inputs: ['source_dir', 'backup_path'],
+        outputs: ['backup_file']
+      }
+    ]
+  },
+  {
+    id: 'atomic_004',
+    name: 'detect-disk.all.sh',
+    description: 'Détecte tous les disques disponibles sur le système',
+    category: 'system',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/detect-disk.all.sh',
+    lastModified: new Date('2024-02-05').toISOString(),
+    tags: ['disk', 'detection', 'storage', 'hardware'],
+    functions: [
+      {
+        name: 'list_all_disks',
+        description: 'Liste tous les disques détectés',
+        inputs: [],
+        outputs: ['disk_list']
+      }
+    ]
+  }
+];
+
+// Fusion des scripts existants avec les nouveaux
+export const allMockScripts = [...mockScripts, ...atomicScripts];
+
 // Fonction pour générer des statistiques à partir des données de test
 export const generateMockStats = () => {
+  const totalScripts = allMockScripts;
   const stats = {
-    total: mockScripts.length,
+    total: totalScripts.length,
     byCategory: {} as Record<string, number>,
     byLevel: {} as Record<string, number>,
     byComplexity: {} as Record<string, number>,
@@ -268,7 +362,7 @@ export const generateMockStats = () => {
     recentlyModified: 0
   };
 
-  mockScripts.forEach(script => {
+  totalScripts.forEach(script => {
     // Par catégorie
     stats.byCategory[script.category] = (stats.byCategory[script.category] || 0) + 1;
     
@@ -305,7 +399,7 @@ export const generateMockStats = () => {
 
 // Fonction pour générer un graphe de dépendances
 export const generateMockDependencyGraph = () => {
-  const nodes = mockScripts.map(script => ({
+  const nodes = allMockScripts.map(script => ({
     id: script.id,
     name: script.name,
     level: script.level,
@@ -315,7 +409,7 @@ export const generateMockDependencyGraph = () => {
 
   const links: Array<{ source: string; target: string; type: string }> = [];
 
-  mockScripts.forEach(script => {
+  allMockScripts.forEach(script => {
     script.dependencies?.forEach(depId => {
       links.push({
         source: depId,
@@ -340,7 +434,7 @@ export const generateMockHierarchy = () => {
   // Grouper par catégorie
   const categories: Record<string, any> = {};
   
-  mockScripts.forEach(script => {
+  allMockScripts.forEach(script => {
     if (!categories[script.category]) {
       categories[script.category] = {
         name: script.category,

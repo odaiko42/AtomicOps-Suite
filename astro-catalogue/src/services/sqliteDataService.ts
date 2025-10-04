@@ -5,7 +5,7 @@
 // Adaptateur pour utiliser SQLite3 avec l'interface GUI existante
 // Compatible avec l'architecture React/TypeScript d'astro-catalogue
 
-import { mockScripts, generateMockStats, generateMockDependencyGraph, generateMockHierarchy } from '../data/mockData';
+import { mockScripts, allMockScripts, generateMockStats, generateMockDependencyGraph, generateMockHierarchy } from '../data/mockData';
 
 // Mode développement - utilise les données de test
 const isDevelopment = import.meta.env.DEV;
@@ -298,7 +298,7 @@ class SQLiteDataService {
   async getAllScripts(): Promise<Script[]> {
     // Mode développement : retourner les données de test
     if (isDevelopment) {
-      return mockScripts;
+      return allMockScripts;
     }
 
     const cacheKey = 'all-scripts';
