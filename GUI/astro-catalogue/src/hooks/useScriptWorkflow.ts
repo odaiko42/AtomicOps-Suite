@@ -204,11 +204,17 @@ export const useScriptWorkflow = () => {
     setSelectedScriptId(undefined);
 
     // === WORKFLOW SSH : SETUP COMPLET D'ACCÈS UTILISATEUR ===
-    // Scripts atomiques SSH (niveau 0)
+    // 
+    // ORGANISATION SPATIALE PAR NIVEAUX:
+    // - Level 0 (Atomiques) : Rangées du haut (y: 50-400)  
+    // - Level 1 (Orchestrateurs) : Rangée du milieu (y: 500-700)
+    // - Flux horizontal : Gauche → Droite selon dépendances
+    
+    // === LEVEL 0 - SCRIPTS ATOMIQUES SSH ===
     const sshGenerate: ScriptInstance = {
       id: 'ssh_generate',
       definitionId: 'ssh_001', // generate-ssh.keypair.sh
-      position: { x: 100, y: 100 },
+      position: { x: 50, y: 50 }, // Début du workflow
       parameters: new Map([
         ['key_type', 'ed25519'],
         ['comment', 'deploy@automation']
@@ -216,10 +222,10 @@ export const useScriptWorkflow = () => {
       status: 'idle'
     };
 
-    const sshList: ScriptInstance = {
-      id: 'ssh_list',
-      definitionId: 'ssh_004', // list-ssh.keys.sh  
-      position: { x: 100, y: 300 },
+    const sshAddKey: ScriptInstance = {
+      id: 'ssh_add_key',
+      definitionId: 'ssh_002', // add-ssh.key.authorized.sh
+      position: { x: 370, y: 50 }, // Après génération
       parameters: new Map([
         ['target_user', 'deploy'],
         ['host', 'prod-server.com']
@@ -230,7 +236,7 @@ export const useScriptWorkflow = () => {
     const sshCheck: ScriptInstance = {
       id: 'ssh_check',
       definitionId: 'ssh_005', // check-ssh.connection.sh
-      position: { x: 100, y: 500 },
+      position: { x: 690, y: 50 }, // Après ajout clé
       parameters: new Map([
         ['host', 'prod-server.com'],
         ['user', 'deploy'],
@@ -239,60 +245,10 @@ export const useScriptWorkflow = () => {
       status: 'idle'
     };
 
-    // === ORCHESTRATEURS SSH (NIVEAU 1) ===
-    const sshSetup: ScriptInstance = {
-      id: 'ssh_setup',
-      definitionId: 'ssh_orch_001', // setup-ssh.access.sh
-      position: { x: 500, y: 200 },
-      parameters: new Map([
-        ['target_user', 'deploy'],
-        ['target_host', 'prod-server.com'],
-        ['key_type', 'ed25519']
-      ]),
-      status: 'idle'
-    };
-
-    const sshAudit: ScriptInstance = {
-      id: 'ssh_audit',
-      definitionId: 'ssh_orch_003', // audit-ssh.keys.sh
-      position: { x: 900, y: 150 },
-      parameters: new Map([
-        ['scan_all_users', 'true'],
-        ['test_connectivity', 'true'],
-        ['generate_report', 'true']
-      ]),
-      status: 'idle'
-    };
-
-    const sshRotate: ScriptInstance = {
-      id: 'ssh_rotate',
-      definitionId: 'ssh_orch_005', // rotate-ssh.keys.sh
-      position: { x: 900, y: 400 },
-      parameters: new Map([
-        ['target_servers', 'prod1.com,prod2.com,prod3.com'],
-        ['rotation_strategy', 'canary'],
-        ['key_type', 'ed25519']
-      ]),
-      status: 'idle'
-    };
-
-    const sshDeploy: ScriptInstance = {
-      id: 'ssh_deploy',
-      definitionId: 'ssh_orch_006', // deploy-ssh.multiserver.sh
-      position: { x: 1300, y: 300 },
-      parameters: new Map([
-        ['target_servers', 'web1.com,web2.com,db1.com'],
-        ['deployment_strategy', 'rolling'],
-        ['max_parallel', '3']
-      ]),
-      status: 'idle'
-    };
-
-    // === SCRIPTS ATOMIQUES SUPPLÉMENTAIRES POUR INTERACTIONS ===
-    const sshAddKey: ScriptInstance = {
-      id: 'ssh_add_key',
-      definitionId: 'ssh_002', // add-ssh.key.authorized.sh
-      position: { x: 300, y: 100 },
+    const sshList: ScriptInstance = {
+      id: 'ssh_list',
+      definitionId: 'ssh_004', // list-ssh.keys.sh  
+      position: { x: 1010, y: 50 }, // Après validation connexion
       parameters: new Map([
         ['target_user', 'deploy'],
         ['host', 'prod-server.com']
@@ -300,23 +256,10 @@ export const useScriptWorkflow = () => {
       status: 'idle'
     };
 
-    const sshExecuteRemote: ScriptInstance = {
-      id: 'ssh_execute',
-      definitionId: 'ssh_006', // execute-ssh.remote.sh
-      position: { x: 700, y: 500 },
-      parameters: new Map([
-        ['host', 'prod-server.com'],
-        ['user', 'deploy'],
-        ['command', 'systemctl status sshd'],
-        ['timeout', '60']
-      ]),
-      status: 'idle'
-    };
-
     const sshCopyFile: ScriptInstance = {
       id: 'ssh_copy',
       definitionId: 'ssh_007', // copy-file.remote.sh
-      position: { x: 300, y: 400 },
+      position: { x: 50, y: 250 }, // Deuxième rangée atomiques
       parameters: new Map([
         ['source', '/local/config.txt'],
         ['destination', '/remote/config.txt'],
@@ -326,10 +269,23 @@ export const useScriptWorkflow = () => {
       status: 'idle'
     };
 
+    const sshExecuteRemote: ScriptInstance = {
+      id: 'ssh_execute',
+      definitionId: 'ssh_006', // execute-ssh.remote.sh
+      position: { x: 370, y: 250 }, // Après copie fichier
+      parameters: new Map([
+        ['host', 'prod-server.com'],
+        ['user', 'deploy'],
+        ['command', 'systemctl status sshd'],
+        ['timeout', '60']
+      ]),
+      status: 'idle'
+    };
+
     const sshDeployScript: ScriptInstance = {
       id: 'ssh_deploy_script',
       definitionId: 'ssh_011', // deploy-script.remote.sh
-      position: { x: 1100, y: 100 },
+      position: { x: 690, y: 250 }, // Après exécution remote
       parameters: new Map([
         ['script_path', '/local/setup.sh'],
         ['remote_host', 'prod-server.com'],
@@ -341,11 +297,60 @@ export const useScriptWorkflow = () => {
     const sshRemoveKey: ScriptInstance = {
       id: 'ssh_remove_key',
       definitionId: 'ssh_003', // remove-ssh.key.authorized.sh
-      position: { x: 700, y: 650 },
+      position: { x: 1010, y: 250 }, // Nettoyage final
       parameters: new Map([
         ['key_fingerprint', 'SHA256:abc123...'],
         ['target_user', 'deploy'],
         ['host', 'prod-server.com']
+      ]),
+      status: 'idle'
+    };
+
+    // === LEVEL 1 - ORCHESTRATEURS SSH ===
+    const sshSetup: ScriptInstance = {
+      id: 'ssh_setup',
+      definitionId: 'ssh_orch_001', // setup-ssh.access.sh
+      position: { x: 50, y: 500 }, // Premier orchestrateur
+      parameters: new Map([
+        ['target_user', 'deploy'],
+        ['target_host', 'prod-server.com'],
+        ['key_type', 'ed25519']
+      ]),
+      status: 'idle'
+    };
+
+    const sshAudit: ScriptInstance = {
+      id: 'ssh_audit',
+      definitionId: 'ssh_orch_003', // audit-ssh.keys.sh
+      position: { x: 400, y: 500 }, // Audit après setup
+      parameters: new Map([
+        ['scan_all_users', 'true'],
+        ['test_connectivity', 'true'],
+        ['generate_report', 'true']
+      ]),
+      status: 'idle'
+    };
+
+    const sshRotate: ScriptInstance = {
+      id: 'ssh_rotate',
+      definitionId: 'ssh_orch_005', // rotate-ssh.keys.sh
+      position: { x: 750, y: 500 }, // Rotation après audit
+      parameters: new Map([
+        ['target_servers', 'prod1.com,prod2.com,prod3.com'],
+        ['rotation_strategy', 'canary'],
+        ['key_type', 'ed25519']
+      ]),
+      status: 'idle'
+    };
+
+    const sshDeploy: ScriptInstance = {
+      id: 'ssh_deploy',
+      definitionId: 'ssh_orch_006', // deploy-ssh.multiserver.sh
+      position: { x: 1100, y: 500 }, // Déploiement final multi-serveurs
+      parameters: new Map([
+        ['target_servers', 'web1.com,web2.com,db1.com'],
+        ['deployment_strategy', 'rolling'],
+        ['max_parallel', '3']
       ]),
       status: 'idle'
     };
@@ -511,21 +516,23 @@ export const useScriptWorkflow = () => {
       }
     ];
 
-    // Appliquer l'exemple SSH complet avec interactions
+    // Appliquer l'exemple SSH organisé par niveaux
     setScripts([
-      // Scripts atomiques niveau 0
-      sshGenerate, sshAddKey, sshList, sshCheck, sshCopyFile, sshExecuteRemote, sshRemoveKey,
-      // Scripts de déploiement niveau 0
-      sshDeployScript,
-      // Orchestrateurs niveau 1
+      // === LEVEL 0 - ATOMIQUES (organisés en 2 rangées) ===
+      // Rangée 1: Génération → Ajout → Validation → Listing
+      sshGenerate, sshAddKey, sshCheck, sshList,
+      // Rangée 2: Copie → Exécution → Déploiement → Nettoyage  
+      sshCopyFile, sshExecuteRemote, sshDeployScript, sshRemoveKey,
+      
+      // === LEVEL 1 - ORCHESTRATEURS (rangée du bas) ===
       sshSetup, sshAudit, sshRotate, sshDeploy
     ]);
     setConnections(sshConnections);
     
-    // Centrer la vue sur le workflow SSH
+    // Centrer la vue sur le workflow SSH organisé
     setTimeout(() => {
-      setCamera({ x: -100, y: -50 });
-      setZoom(0.7);
+      setCamera({ x: -50, y: -30 });
+      setZoom(0.6); // Zoom réduit pour voir l'ensemble du workflow
     }, 100);
   }, []);
 

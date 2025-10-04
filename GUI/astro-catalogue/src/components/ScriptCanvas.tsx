@@ -62,6 +62,22 @@ const SCRIPT_HEIGHT = 180;
 const SOCKET_RADIUS = 8;
 const SOCKET_SPACING = 25;
 
+// Configuration des niveaux
+const LEVEL_CONFIG = {
+  0: { label: 'Level 0 - Atomique', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.2)' },
+  1: { label: 'Level 1 - Orchestrateur', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.2)' },
+  2: { label: 'Level 2 - Orchestrateur', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.2)' },
+  3: { label: 'Level 3 - Main', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.2)' },
+  'atomic': { label: 'Level 0 - Atomique', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.2)' },
+  'orchestrator': { label: 'Level 1+ - Orchestrateur', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.2)' },
+  'main': { label: 'Level 3 - Main', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.2)' }
+} as const;
+
+const getLevelConfig = (level: string | number) => {
+  const key = String(level) as keyof typeof LEVEL_CONFIG;
+  return LEVEL_CONFIG[key] || LEVEL_CONFIG[0];
+};
+
 export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
   scripts,
   connections,
@@ -311,22 +327,25 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
         
         {/* Badge de niveau */}
         <rect
-          x={SCRIPT_WIDTH - 60}
-          y="8"
-          width="50"
-          height="20"
-          rx="10"
-          fill="rgba(255,255,255,0.2)"
+          x={SCRIPT_WIDTH - 130}
+          y="6"
+          width="120"
+          height="22"
+          rx="11"
+          fill={getLevelConfig(definition.level).bgColor}
+          stroke={getLevelConfig(definition.level).color}
+          strokeWidth="1"
         />
         <text
-          x={SCRIPT_WIDTH - 35}
-          y="20"
-          fontSize="10"
-          fill="white"
+          x={SCRIPT_WIDTH - 70}
+          y="19"
+          fontSize="9"
+          fontWeight="600"
+          fill={getLevelConfig(definition.level).color}
           textAnchor="middle"
           className="select-none"
         >
-          {definition.level}
+          {getLevelConfig(definition.level).label}
         </text>
 
         {/* Description */}
@@ -377,6 +396,29 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
         <g transform={`translate(12, ${SCRIPT_HEIGHT - 25})`}>
           <StatusIcon />
         </g>
+
+        {/* Cadre de niveau au bas du script */}
+        <rect
+          x="0"
+          y={SCRIPT_HEIGHT - 30}
+          width={SCRIPT_WIDTH}
+          height="30"
+          fill={getLevelConfig(definition.level).bgColor}
+          stroke={getLevelConfig(definition.level).color}
+          strokeWidth="1"
+          rx="0 0 8 8"
+        />
+        <text
+          x={SCRIPT_WIDTH / 2}
+          y={SCRIPT_HEIGHT - 10}
+          fontSize="12"
+          fontWeight="bold"
+          fill={getLevelConfig(definition.level).color}
+          textAnchor="middle"
+          className="select-none"
+        >
+          {getLevelConfig(definition.level).label}
+        </text>
       </g>
     );
   };
