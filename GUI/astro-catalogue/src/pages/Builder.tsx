@@ -3,6 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { ScriptCanvas } from "@/components/ScriptCanvas";
 import { ScriptLibrary } from "@/components/ScriptLibrary";
 import { useScriptWorkflow } from "@/hooks/useScriptWorkflow";
@@ -19,7 +25,10 @@ import {
   Target,
   Settings,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown,
+  Network,
+  Database
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +54,7 @@ export default function Builder() {
     exportWorkflow,
     importWorkflow,
     loadExampleWorkflow,
+    loadSSHExampleWorkflow,
     zoomIn,
     zoomOut,
     resetView,
@@ -200,16 +210,45 @@ export default function Builder() {
                 <Upload className="h-4 w-4 mr-2" />
                 Charger
               </Button>
-              <Button 
-                onClick={() => {
-                  loadExampleWorkflow();
-                  toast.success('Exemple de workflow chargé');
-                }}
-                variant="outline"
-              >
-                <Target className="h-4 w-4 mr-2" />
-                Exemple
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Target className="h-4 w-4 mr-2" />
+                    Exemples
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      loadExampleWorkflow();
+                      toast.success('Exemple de workflow Infrastructure chargé');
+                    }}
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span>Infrastructure & Storage</span>
+                      <span className="text-xs text-muted-foreground">
+                        iSCSI, disques, containers
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      loadSSHExampleWorkflow();
+                      toast.success('Exemple de workflow SSH chargé');
+                    }}
+                  >
+                    <Network className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col">
+                      <span>Gestion SSH Complète</span>
+                      <span className="text-xs text-muted-foreground">
+                        Clés, accès, audit, rotation
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={handleDownload} variant="outline" disabled={scripts.length === 0}>
                 <Download className="h-4 w-4 mr-2" />
                 Exporter

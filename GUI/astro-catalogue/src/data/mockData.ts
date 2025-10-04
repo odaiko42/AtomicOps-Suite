@@ -431,8 +431,246 @@ const performanceScripts: Script[] = [
   }
 ];
 
+// Scripts SSH atomiques (niveau 0) et orchestrateurs (niveau 1)
+const sshScripts: Script[] = [
+  // === SCRIPTS ATOMIQUES SSH (NIVEAU 0) ===
+  {
+    id: 'ssh_001',
+    name: 'generate-ssh.keypair.sh',
+    description: 'Génère une paire de clés SSH sécurisée avec configuration optimale',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/network/generate-ssh.keypair.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'security', 'keys', 'authentication'],
+    functions: [
+      {
+        name: 'generate_keypair',
+        description: 'Génère paire de clés SSH avec type et taille spécifiés',
+        inputs: ['key_type', 'key_size', 'comment', 'output_path'],
+        outputs: ['private_key_path', 'public_key_path', 'fingerprint']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_002',
+    name: 'add-ssh.key.authorized.sh',
+    description: 'Ajoute une clé publique SSH au fichier authorized_keys d\'un utilisateur',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/network/add-ssh.key.authorized.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'authorization', 'keys', 'access'],
+    functions: [
+      {
+        name: 'add_authorized_key',
+        description: 'Ajoute une clé au fichier authorized_keys',
+        inputs: ['public_key', 'target_user', 'host'],
+        outputs: ['key_added', 'authorized_keys_path']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_003',
+    name: 'remove-ssh.key.authorized.sh',
+    description: 'Supprime une clé publique SSH du fichier authorized_keys',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/network/remove-ssh.key.authorized.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'revocation', 'keys', 'security'],
+    functions: [
+      {
+        name: 'remove_authorized_key',
+        description: 'Supprime une clé du fichier authorized_keys',
+        inputs: ['key_fingerprint', 'target_user', 'host'],
+        outputs: ['key_removed', 'backup_created']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_004',
+    name: 'list-ssh.keys.sh',
+    description: 'Liste toutes les clés SSH d\'un utilisateur avec métadonnées',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'low',
+    path: '/root/atomics/network/list-ssh.keys.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'inventory', 'keys', 'audit'],
+    functions: [
+      {
+        name: 'list_user_keys',
+        description: 'Liste les clés SSH avec empreintes et métadonnées',
+        inputs: ['target_user', 'host', 'key_type_filter'],
+        outputs: ['keys_list', 'total_count', 'key_metadata']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'ssh_005',
+    name: 'check-ssh.connection.sh',
+    description: 'Teste la connectivité SSH vers un hôte avec validation d\'authentification',
+    category: 'network',
+    level: 0,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/atomics/network/check-ssh.connection.sh',
+    lastModified: new Date('2024-03-01').toISOString(),
+    tags: ['ssh', 'connectivity', 'testing', 'validation'],
+    functions: [
+      {
+        name: 'test_ssh_connection',
+        description: 'Teste la connexion SSH avec différentes méthodes d\'auth',
+        inputs: ['host', 'user', 'port', 'identity_file', 'timeout'],
+        outputs: ['connection_status', 'auth_method', 'response_time']
+      }
+    ],
+    dependencies: []
+  },
+
+  // === ORCHESTRATEURS SSH (NIVEAU 1) ===
+  {
+    id: 'ssh_orch_001',
+    name: 'setup-ssh.access.sh',
+    description: 'Configuration complète d\'accès SSH pour un utilisateur (génération + déploiement + test)',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/orchestrators/level-1/setup-ssh.access.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'setup', 'automation'],
+    functions: [
+      {
+        name: 'setup_complete_access',
+        description: 'Orchestration complète setup SSH avec validation',
+        inputs: ['target_user', 'target_host', 'key_type', 'test_connection'],
+        outputs: ['access_configured', 'key_deployed', 'connection_validated']
+      }
+    ],
+    dependencies: ['ssh_001', 'ssh_002', 'ssh_005']
+  },
+  {
+    id: 'ssh_orch_002',
+    name: 'revoke-ssh.access.sh',
+    description: 'Révocation sécurisée d\'accès SSH avec sauvegarde et vérification',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'medium',
+    path: '/root/orchestrators/level-1/revoke-ssh.access.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'revocation', 'security'],
+    functions: [
+      {
+        name: 'revoke_user_access',
+        description: 'Révocation complète avec backup et vérification',
+        inputs: ['target_user', 'target_host', 'backup_keys', 'verify_revocation'],
+        outputs: ['access_revoked', 'backup_created', 'revocation_verified']
+      }
+    ],
+    dependencies: ['ssh_003', 'ssh_004', 'ssh_005']
+  },
+  {
+    id: 'ssh_orch_003',
+    name: 'audit-ssh.keys.sh',
+    description: 'Audit complet des clés SSH système avec analyse sécuritaire et rapport',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/orchestrators/level-1/audit-ssh.keys.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'audit', 'security', 'compliance'],
+    functions: [
+      {
+        name: 'perform_ssh_audit',
+        description: 'Audit système complet avec analyse et recommandations',
+        inputs: ['scan_all_users', 'test_connectivity', 'generate_report'],
+        outputs: ['audit_report', 'security_analysis', 'recommendations']
+      }
+    ],
+    dependencies: ['ssh_004', 'ssh_005']
+  },
+  {
+    id: 'ssh_orch_004',
+    name: 'migrate-ssh.user.sh',
+    description: 'Migration des clés SSH d\'un utilisateur entre serveurs avec validation',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/orchestrators/level-1/migrate-ssh.user.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'migration', 'infrastructure'],
+    functions: [
+      {
+        name: 'migrate_user_keys',
+        description: 'Migration complète avec backup et validation',
+        inputs: ['source_host', 'dest_host', 'migrate_user', 'migration_mode'],
+        outputs: ['migration_completed', 'keys_migrated', 'validation_passed']
+      }
+    ],
+    dependencies: ['ssh_004', 'ssh_002', 'ssh_005']
+  },
+  {
+    id: 'ssh_orch_005',
+    name: 'rotate-ssh.keys.sh',
+    description: 'Rotation complète des clés SSH avec stratégies multiples (sequential/parallel/canary)',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/orchestrators/level-1/rotate-ssh.keys.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'rotation', 'security', 'automation'],
+    functions: [
+      {
+        name: 'rotate_ssh_keys',
+        description: 'Rotation avec stratégies avancées et rollback automatique',
+        inputs: ['target_servers', 'rotation_strategy', 'key_type', 'grace_period'],
+        outputs: ['rotation_completed', 'servers_success', 'rollback_executed']
+      }
+    ],
+    dependencies: ['ssh_001', 'ssh_002', 'ssh_003', 'ssh_005']
+  },
+  {
+    id: 'ssh_orch_006',
+    name: 'deploy-ssh.multiserver.sh',
+    description: 'Déploiement massif de clés SSH sur infrastructure avec orchestration avancée',
+    category: 'network',
+    level: 1,
+    status: 'stable',
+    complexity: 'high',
+    path: '/root/orchestrators/level-1/deploy-ssh.multiserver.sh',
+    lastModified: new Date('2024-10-05').toISOString(),
+    tags: ['ssh', 'orchestrator', 'deployment', 'infrastructure', 'automation'],
+    functions: [
+      {
+        name: 'deploy_multiserver',
+        description: 'Déploiement avec stratégies (rolling/canary/parallel) et retry intelligent',
+        inputs: ['target_servers', 'ssh_key_file', 'deployment_strategy', 'max_parallel'],
+        outputs: ['deployment_completed', 'servers_success', 'deployment_report']
+      }
+    ],
+    dependencies: ['ssh_002', 'ssh_005']
+  }
+];
+
 // Fusion des scripts existants avec les nouveaux
-export const allMockScripts = [...mockScripts, ...atomicScripts, ...performanceScripts];
+export const allMockScripts = [...mockScripts, ...atomicScripts, ...performanceScripts, ...sshScripts];
 
 // Fonction pour générer des statistiques à partir des données de test
 export const generateMockStats = () => {

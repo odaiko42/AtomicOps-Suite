@@ -196,6 +196,176 @@ export const useScriptWorkflow = () => {
     }, 100);
   }, []);
 
+  // Charger un exemple de workflow SSH
+  const loadSSHExampleWorkflow = useCallback(() => {
+    // Effacer le workflow actuel
+    setScripts([]);
+    setConnections([]);
+    setSelectedScriptId(undefined);
+
+    // === WORKFLOW SSH : SETUP COMPLET D'ACCÈS UTILISATEUR ===
+    // Scripts atomiques SSH (niveau 0)
+    const sshGenerate: ScriptInstance = {
+      id: 'ssh_generate',
+      definitionId: 'ssh_001', // generate-ssh.keypair.sh
+      position: { x: 100, y: 100 },
+      parameters: new Map([
+        ['key_type', 'ed25519'],
+        ['comment', 'deploy@automation']
+      ]),
+      status: 'idle'
+    };
+
+    const sshList: ScriptInstance = {
+      id: 'ssh_list',
+      definitionId: 'ssh_004', // list-ssh.keys.sh  
+      position: { x: 100, y: 300 },
+      parameters: new Map([
+        ['target_user', 'deploy'],
+        ['host', 'prod-server.com']
+      ]),
+      status: 'idle'
+    };
+
+    const sshCheck: ScriptInstance = {
+      id: 'ssh_check',
+      definitionId: 'ssh_005', // check-ssh.connection.sh
+      position: { x: 100, y: 500 },
+      parameters: new Map([
+        ['host', 'prod-server.com'],
+        ['user', 'deploy'],
+        ['timeout', '30']
+      ]),
+      status: 'idle'
+    };
+
+    // === ORCHESTRATEURS SSH (NIVEAU 1) ===
+    const sshSetup: ScriptInstance = {
+      id: 'ssh_setup',
+      definitionId: 'ssh_orch_001', // setup-ssh.access.sh
+      position: { x: 500, y: 200 },
+      parameters: new Map([
+        ['target_user', 'deploy'],
+        ['target_host', 'prod-server.com'],
+        ['key_type', 'ed25519']
+      ]),
+      status: 'idle'
+    };
+
+    const sshAudit: ScriptInstance = {
+      id: 'ssh_audit',
+      definitionId: 'ssh_orch_003', // audit-ssh.keys.sh
+      position: { x: 900, y: 150 },
+      parameters: new Map([
+        ['scan_all_users', 'true'],
+        ['test_connectivity', 'true'],
+        ['generate_report', 'true']
+      ]),
+      status: 'idle'
+    };
+
+    const sshRotate: ScriptInstance = {
+      id: 'ssh_rotate',
+      definitionId: 'ssh_orch_005', // rotate-ssh.keys.sh
+      position: { x: 900, y: 400 },
+      parameters: new Map([
+        ['target_servers', 'prod1.com,prod2.com,prod3.com'],
+        ['rotation_strategy', 'canary'],
+        ['key_type', 'ed25519']
+      ]),
+      status: 'idle'
+    };
+
+    const sshDeploy: ScriptInstance = {
+      id: 'ssh_deploy',
+      definitionId: 'ssh_orch_006', // deploy-ssh.multiserver.sh
+      position: { x: 1300, y: 300 },
+      parameters: new Map([
+        ['target_servers', 'web1.com,web2.com,db1.com'],
+        ['deployment_strategy', 'rolling'],
+        ['max_parallel', '3']
+      ]),
+      status: 'idle'
+    };
+
+    // Connexions pour workflow SSH
+    const sshConnections: ScriptConnection[] = [
+      // generate-ssh -> setup-ssh.access
+      {
+        id: 'ssh_conn_1',
+        sourceScriptId: 'ssh_generate',
+        sourceSocket: 'private_key_path',
+        targetScriptId: 'ssh_setup',
+        targetSocket: 'trigger',
+        type: ScriptDataType.FILE
+      },
+      // list-ssh -> setup-ssh.access
+      {
+        id: 'ssh_conn_2', 
+        sourceScriptId: 'ssh_list',
+        sourceSocket: 'keys_list',
+        targetScriptId: 'ssh_setup',
+        targetSocket: 'trigger',
+        type: ScriptDataType.JSON
+      },
+      // setup-ssh -> audit-ssh
+      {
+        id: 'ssh_conn_3',
+        sourceScriptId: 'ssh_setup',
+        sourceSocket: 'access_configured',
+        targetScriptId: 'ssh_audit',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // setup-ssh -> rotate-ssh
+      {
+        id: 'ssh_conn_4',
+        sourceScriptId: 'ssh_setup',
+        sourceSocket: 'key_deployed',
+        targetScriptId: 'ssh_rotate',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // check-ssh -> setup-ssh (validation)
+      {
+        id: 'ssh_conn_5',
+        sourceScriptId: 'ssh_check',
+        sourceSocket: 'connection_status',
+        targetScriptId: 'ssh_setup',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      },
+      // audit-ssh -> deploy-ssh (après validation)
+      {
+        id: 'ssh_conn_6',
+        sourceScriptId: 'ssh_audit',
+        sourceSocket: 'audit_report',
+        targetScriptId: 'ssh_deploy',
+        targetSocket: 'trigger',
+        type: ScriptDataType.JSON
+      },
+      // rotate-ssh -> deploy-ssh (nouvelles clés)
+      {
+        id: 'ssh_conn_7',
+        sourceScriptId: 'ssh_rotate',
+        sourceSocket: 'rotation_completed',
+        targetScriptId: 'ssh_deploy',
+        targetSocket: 'trigger',
+        type: ScriptDataType.STRING
+      }
+    ];
+
+    // Appliquer l'exemple SSH
+    setScripts([sshGenerate, sshList, sshCheck, sshSetup, sshAudit, sshRotate, sshDeploy]);
+    setConnections(sshConnections);
+    
+    // Centrer la vue sur le workflow SSH
+    setTimeout(() => {
+      setCamera({ x: -100, y: -50 });
+      setZoom(0.7);
+    }, 100);
+  }, []);
+
   // Ajouter un script au workflow
   const addScript = useCallback((definition: ScriptDefinition, position: Point2D): ScriptInstance => {
     const newScript: ScriptInstance = {
@@ -446,6 +616,7 @@ export const useScriptWorkflow = () => {
     exportWorkflow,
     importWorkflow,
     loadExampleWorkflow,
+    loadSSHExampleWorkflow,
     
     // Vue
     zoomIn,
