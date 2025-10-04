@@ -343,8 +343,96 @@ const atomicScripts: Script[] = [
   }
 ];
 
+// Scripts de performance
+const performanceScripts: Script[] = [
+  {
+    id: 'perf_001',
+    name: 'get-cpu.info.sh',
+    description: 'Collecte des informations détaillées sur le processeur',
+    category: 'performance',
+    level: 0,
+    status: 'stable',
+    complexity: 'simple',
+    path: '/root/atomics/performance/cpu/get-cpu.info.sh',
+    lastModified: new Date('2025-10-04').toISOString(),
+    tags: ['cpu', 'info', 'monitoring', 'hardware'],
+    functions: [
+      {
+        name: 'get_cpu_details',
+        description: 'Récupère les détails du processeur',
+        inputs: ['format'],
+        outputs: ['cpu_info', 'architecture', 'frequencies']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'perf_002',
+    name: 'get-memory.info.sh',
+    description: 'Informations complètes sur la mémoire système',
+    category: 'performance',
+    level: 0,
+    status: 'stable',
+    complexity: 'simple',
+    path: '/root/atomics/performance/memory/get-memory.info.sh',
+    lastModified: new Date('2025-10-04').toISOString(),
+    tags: ['memory', 'ram', 'monitoring', 'system'],
+    functions: [
+      {
+        name: 'get_memory_stats',
+        description: 'Statistiques mémoire détaillées',
+        inputs: ['detail_level'],
+        outputs: ['memory_info', 'swap_info', 'usage_stats']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'perf_003',
+    name: 'benchmark-disk.speed.sh',
+    description: 'Benchmark de vitesse des disques',
+    category: 'performance',
+    level: 1,
+    status: 'stable',
+    complexity: 'moyen',
+    path: '/root/atomics/performance/io/benchmark-disk.speed.sh',
+    lastModified: new Date('2025-10-04').toISOString(),
+    tags: ['disk', 'benchmark', 'io', 'performance'],
+    functions: [
+      {
+        name: 'run_disk_benchmark',
+        description: 'Effectue les tests de vitesse disque',
+        inputs: ['target_path', 'file_size'],
+        outputs: ['read_speed', 'write_speed', 'latency']
+      }
+    ],
+    dependencies: []
+  },
+  {
+    id: 'perf_004',
+    name: 'get-network.bandwidth.sh',
+    description: 'Mesure la bande passante réseau en temps réel',
+    category: 'performance',
+    level: 0,
+    status: 'stable',
+    complexity: 'moyen',
+    path: '/root/atomics/performance/network/get-network.bandwidth.sh',
+    lastModified: new Date('2025-10-04').toISOString(),
+    tags: ['network', 'bandwidth', 'monitoring', 'traffic'],
+    functions: [
+      {
+        name: 'measure_bandwidth',
+        description: 'Mesure la bande passante par interface',
+        inputs: ['interface', 'interval'],
+        outputs: ['rx_bandwidth', 'tx_bandwidth', 'statistics']
+      }
+    ],
+    dependencies: []
+  }
+];
+
 // Fusion des scripts existants avec les nouveaux
-export const allMockScripts = [...mockScripts, ...atomicScripts];
+export const allMockScripts = [...mockScripts, ...atomicScripts, ...performanceScripts];
 
 // Fonction pour générer des statistiques à partir des données de test
 export const generateMockStats = () => {

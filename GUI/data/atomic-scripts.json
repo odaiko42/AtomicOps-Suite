@@ -1,1056 +1,2359 @@
-{
-  "metadata": {
-    "version": "1.0.0",
-    "generated": "2025-10-04T10:00:00Z",
-    "description": "Base de données des scripts atomiques AtomicOps Suite",
-    "total_scripts": 22,
-    "categories": ["usb", "iscsi", "network", "system", "file"],
-    "levels": ["atomic", "orchestrator", "main"]
-  },
-  "scripts": [
-    {
-      "id": "select-disk",
-      "name": "Sélecteur de Disque USB",
-      "description": "Interface interactive pour sélectionner un disque USB parmi ceux disponibles. Affiche les informations détaillées de chaque disque.",
-      "category": "usb",
-      "level": "atomic",
-      "path": "scripts/atomic/select-disk.sh",
-      "inputs": [
-        "liste_disques_disponibles",
-        "preferences_utilisateur"
-      ],
-      "outputs": [
-        "disque_selectionne",
-        "informations_disque"
-      ],
-      "conditions": [
-        "au_moins_un_disque_detecte",
-        "interface_interactive_disponible"
-      ],
-      "dependencies": [],
-      "tags": ["usb", "selection", "interactive", "validation"],
-      "complexity": "low",
-      "status": "stable",
-      "lastModified": "2025-10-03T15:30:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.2.0",
-      "functions": [
-        {
-          "name": "list_available_disks",
-          "description": "Liste tous les disques USB détectés",
-          "inputs": [],
-          "outputs": ["disk_array"]
-        },
-        {
-          "name": "display_disk_info",
-          "description": "Affiche les informations détaillées d'un disque",
-          "inputs": ["disk_device"],
-          "outputs": ["formatted_info"]
-        },
-        {
-          "name": "prompt_user_selection",
-          "description": "Invite l'utilisateur à choisir un disque",
-          "inputs": ["disk_list"],
-          "outputs": ["selected_disk"]
-        }
-      ]
-    },
-    {
-      "id": "format-disk",
-      "name": "Formatage de Disque USB",
-      "description": "Formate un disque USB avec le système de fichiers spécifié (ext4, vfat, ntfs). Inclut la vérification de sécurité et la confirmation utilisateur.",
-      "category": "usb",
-      "level": "atomic",
-      "path": "scripts/atomic/format-disk.sh",
-      "inputs": [
-        "disque_cible",
-        "systeme_fichiers",
-        "label_volume",
-        "options_formatage"
-      ],
-      "outputs": [
-        "disque_formate",
-        "rapport_formatage",
-        "nouvel_uuid"
-      ],
-      "conditions": [
-        "disque_non_monte",
-        "permissions_administrateur",
-        "confirmation_utilisateur",
-        "espace_suffisant"
-      ],
-      "dependencies": [],
-      "tags": ["usb", "format", "destructive", "filesystem", "security"],
-      "complexity": "medium",
-      "status": "stable",
-      "lastModified": "2025-10-02T09:15:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.1.0",
-      "functions": [
-        {
-          "name": "check_disk_status",
-          "description": "Vérifie que le disque peut être formaté",
-          "inputs": ["disk_device"],
-          "outputs": ["status_check"]
-        },
-        {
-          "name": "unmount_disk",
-          "description": "Démonte le disque s'il est monté",
-          "inputs": ["disk_device"],
-          "outputs": ["unmount_success"]
-        },
-        {
-          "name": "format_with_filesystem",
-          "description": "Effectue le formatage avec le système spécifié",
-          "inputs": ["disk_device", "fs_type", "label"],
-          "outputs": ["format_result"]
-        },
-        {
-          "name": "verify_format",
-          "description": "Vérifie l'intégrité du formatage",
-          "inputs": ["disk_device"],
-          "outputs": ["verification_report"]
-        }
-      ]
-    },
-    {
-      "id": "mount-disk",
-      "name": "Montage de Disque USB",
-      "description": "Monte un disque USB à l'emplacement spécifié avec les options appropriées. Gère les permissions et la création du point de montage.",
-      "category": "usb",
-      "level": "atomic",
-      "path": "scripts/atomic/mount-disk.sh",
-      "inputs": [
-        "disque_source",
-        "point_montage",
-        "options_montage",
-        "permissions_cible"
-      ],
-      "outputs": [
-        "disque_monte",
-        "chemin_acces",
-        "informations_montage"
-      ],
-      "conditions": [
-        "disque_non_monte",
-        "point_montage_disponible",
-        "permissions_suffisantes"
-      ],
-      "dependencies": [],
-      "tags": ["usb", "mount", "filesystem", "permissions"],
-      "complexity": "low",
-      "status": "stable",
-      "lastModified": "2025-10-01T14:22:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.0.0",
-      "functions": [
-        {
-          "name": "create_mount_point",
-          "description": "Crée le répertoire de montage si nécessaire",
-          "inputs": ["mount_path"],
-          "outputs": ["creation_success"]
-        },
-        {
-          "name": "mount_device",
-          "description": "Monte le périphérique au point spécifié",
-          "inputs": ["device", "mount_point", "options"],
-          "outputs": ["mount_success"]
-        },
-        {
-          "name": "set_permissions",
-          "description": "Configure les permissions du point de montage",
-          "inputs": ["mount_path", "permissions"],
-          "outputs": ["permissions_set"]
-        }
-      ]
-    },
-    {
-      "id": "detect-usb",
-      "name": "Détection USB",
-      "description": "Détecte et liste tous les périphériques de stockage USB connectés au système. Fournit des informations détaillées sur chaque périphérique.",
-      "category": "usb",
-      "level": "atomic",
-      "path": "scripts/atomic/detect-usb.sh",
-      "inputs": [
-        "criteres_filtrage",
-        "niveau_detail"
-      ],
-      "outputs": [
-        "liste_peripheriques",
-        "informations_detaillees",
-        "statuts_montage"
-      ],
-      "conditions": [
-        "systeme_udev_disponible",
-        "permissions_lecture"
-      ],
-      "dependencies": [],
-      "tags": ["usb", "detection", "hardware", "listing"],
-      "complexity": "low",
-      "status": "stable",
-      "lastModified": "2025-09-30T11:45:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.3.0",
-      "functions": [
-        {
-          "name": "scan_usb_devices",
-          "description": "Scanne tous les périphériques USB",
-          "inputs": [],
-          "outputs": ["device_list"]
-        },
-        {
-          "name": "get_device_info",
-          "description": "Récupère les informations détaillées d'un périphérique",
-          "inputs": ["device_id"],
-          "outputs": ["device_details"]
-        },
-        {
-          "name": "check_mount_status",
-          "description": "Vérifie le statut de montage des périphériques",
-          "inputs": ["device_list"],
-          "outputs": ["mount_status_array"]
-        }
-      ]
-    },
-    {
-      "id": "setup-iscsi-target",
-      "name": "Configuration Cible iSCSI",
-      "description": "Configure une cible iSCSI avec targetcli-fb pour partager le stockage USB via le réseau. Gère l'authentification et les ACL.",
-      "category": "iscsi",
-      "level": "atomic",
-      "path": "scripts/atomic/setup-iscsi-target.sh",
-      "inputs": [
-        "chemin_stockage",
-        "nom_cible",
-        "iqn_initiateur",
-        "parametres_auth"
-      ],
-      "outputs": [
-        "cible_configuree",
-        "informations_connexion",
-        "parametres_acl"
-      ],
-      "conditions": [
-        "targetcli_installe",
-        "stockage_accessible",
-        "permissions_administrateur",
-        "ports_disponibles"
-      ],
-      "dependencies": [],
-      "tags": ["iscsi", "target", "network", "storage", "authentication"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-10-02T16:10:00Z",
-      "author": "AtomicOps Team",
-      "version": "2.0.0",
-      "functions": [
-        {
-          "name": "create_backstore",
-          "description": "Crée le backstore pour la cible iSCSI",
-          "inputs": ["storage_path", "backstore_name"],
-          "outputs": ["backstore_object"]
-        },
-        {
-          "name": "create_target",
-          "description": "Crée la cible iSCSI avec l'IQN spécifié",
-          "inputs": ["target_iqn"],
-          "outputs": ["target_object"]
-        },
-        {
-          "name": "configure_lun",
-          "description": "Configure le LUN et l'associe au backstore",
-          "inputs": ["target_object", "backstore_object"],
-          "outputs": ["lun_configured"]
-        },
-        {
-          "name": "setup_acl",
-          "description": "Configure les ACL et l'authentification",
-          "inputs": ["target_object", "initiator_iqn", "auth_params"],
-          "outputs": ["acl_configured"]
-        }
-      ]
-    },
-    {
-      "id": "configure-iscsi-network",
-      "name": "Configuration Réseau iSCSI",
-      "description": "Configure les paramètres réseau pour iSCSI : interfaces, ports, firewall. Optimise les performances réseau pour le stockage.",
-      "category": "iscsi",
-      "level": "atomic",
-      "path": "scripts/atomic/configure-iscsi-network.sh",
-      "inputs": [
-        "interface_reseau",
-        "adresse_ip",
-        "port_iscsi",
-        "regles_firewall"
-      ],
-      "outputs": [
-        "reseau_configure",
-        "regles_firewall_actives",
-        "parametres_optimises"
-      ],
-      "conditions": [
-        "interface_disponible",
-        "adresse_ip_libre",
-        "firewall_accessible"
-      ],
-      "dependencies": [],
-      "tags": ["iscsi", "network", "firewall", "performance", "configuration"],
-      "complexity": "medium",
-      "status": "stable",
-      "lastModified": "2025-09-28T13:20:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.4.0",
-      "functions": [
-        {
-          "name": "configure_interface",
-          "description": "Configure l'interface réseau pour iSCSI",
-          "inputs": ["interface", "ip_address"],
-          "outputs": ["interface_configured"]
-        },
-        {
-          "name": "setup_firewall_rules",
-          "description": "Configure les règles de firewall pour iSCSI",
-          "inputs": ["port", "interface"],
-          "outputs": ["firewall_rules_set"]
-        },
-        {
-          "name": "optimize_network_params",
-          "description": "Optimise les paramètres réseau pour les performances",
-          "inputs": ["interface"],
-          "outputs": ["optimization_applied"]
-        }
-      ]
-    },
-    {
-      "id": "test-iscsi-connection",
-      "name": "Test Connexion iSCSI",
-      "description": "Teste la connectivité et les performances d'une connexion iSCSI. Valide l'authentification et mesure les performances.",
-      "category": "iscsi",
-      "level": "atomic",
-      "path": "scripts/atomic/test-iscsi-connection.sh",
-      "inputs": [
-        "adresse_cible",
-        "iqn_cible",
-        "parametres_auth",
-        "tests_performance"
-      ],
-      "outputs": [
-        "rapport_connectivite",
-        "metriques_performance",
-        "statut_authentification"
-      ],
-      "conditions": [
-        "cible_accessible",
-        "outils_test_disponibles"
-      ],
-      "dependencies": [],
-      "tags": ["iscsi", "test", "connectivity", "performance", "validation"],
-      "complexity": "medium",
-      "status": "stable",
-      "lastModified": "2025-09-29T10:30:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.1.0",
-      "functions": [
-        {
-          "name": "test_connectivity",
-          "description": "Teste la connectivité réseau vers la cible",
-          "inputs": ["target_address", "port"],
-          "outputs": ["connectivity_result"]
-        },
-        {
-          "name": "test_authentication",
-          "description": "Teste l'authentification iSCSI",
-          "inputs": ["target_iqn", "auth_params"],
-          "outputs": ["auth_result"]
-        },
-        {
-          "name": "measure_performance",
-          "description": "Mesure les performances de la connexion",
-          "inputs": ["target_iqn"],
-          "outputs": ["performance_metrics"]
-        }
-      ]
-    },
-    {
-      "id": "validate-storage-integrity",
-      "name": "Validation Intégrité Stockage",
-      "description": "Valide l'intégrité du stockage USB avant et après le partage iSCSI. Effectue des tests de lecture/écriture et de checksums.",
-      "category": "system",
-      "level": "atomic",
-      "path": "scripts/atomic/validate-storage-integrity.sh",
-      "inputs": [
-        "peripherique_stockage",
-        "niveau_test",
-        "fichiers_test",
-        "checksums_reference"
-      ],
-      "outputs": [
-        "rapport_integrite",
-        "resultats_tests",
-        "erreurs_detectees"
-      ],
-      "conditions": [
-        "stockage_accessible",
-        "permissions_lecture_ecriture",
-        "espace_temporaire_disponible"
-      ],
-      "dependencies": [],
-      "tags": ["storage", "validation", "integrity", "testing", "checksum"],
-      "complexity": "medium",
-      "status": "stable",
-      "lastModified": "2025-10-01T08:45:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.2.0",
-      "functions": [
-        {
-          "name": "run_surface_scan",
-          "description": "Effectue un scan de surface du stockage",
-          "inputs": ["device_path"],
-          "outputs": ["scan_results"]
-        },
-        {
-          "name": "test_read_write",
-          "description": "Teste les opérations de lecture/écriture",
-          "inputs": ["device_path", "test_size"],
-          "outputs": ["rw_test_results"]
-        },
-        {
-          "name": "verify_checksums",
-          "description": "Vérifie les checksums des fichiers",
-          "inputs": ["file_list", "reference_checksums"],
-          "outputs": ["checksum_validation"]
-        }
-      ]
-    },
-    {
-      "id": "monitor-system-resources",
-      "name": "Monitoring Ressources Système",
-      "description": "Surveille l'utilisation des ressources système (CPU, mémoire, I/O) pendant les opérations de stockage. Génère des alertes si nécessaire.",
-      "category": "system",
-      "level": "atomic",
-      "path": "scripts/atomic/monitor-system-resources.sh",
-      "inputs": [
-        "seuils_alerte",
-        "duree_monitoring",
-        "intervalles_mesure"
-      ],
-      "outputs": [
-        "metriques_systeme",
-        "alertes_generees",
-        "historique_utilisation"
-      ],
-      "conditions": [
-        "outils_monitoring_disponibles",
-        "permissions_lecture_proc"
-      ],
-      "dependencies": [],
-      "tags": ["system", "monitoring", "performance", "resources", "alerting"],
-      "complexity": "medium",
-      "status": "stable",
-      "lastModified": "2025-09-27T16:55:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.0.0",
-      "functions": [
-        {
-          "name": "collect_cpu_metrics",
-          "description": "Collecte les métriques d'utilisation CPU",
-          "inputs": ["interval"],
-          "outputs": ["cpu_metrics"]
-        },
-        {
-          "name": "collect_memory_metrics",
-          "description": "Collecte les métriques d'utilisation mémoire",
-          "inputs": ["interval"],
-          "outputs": ["memory_metrics"]
-        },
-        {
-          "name": "collect_io_metrics",
-          "description": "Collecte les métriques d'I/O disque",
-          "inputs": ["devices", "interval"],
-          "outputs": ["io_metrics"]
-        },
-        {
-          "name": "check_thresholds",
-          "description": "Vérifie les seuils d'alerte",
-          "inputs": ["metrics", "thresholds"],
-          "outputs": ["alerts"]
-        }
-      ]
-    },
-    {
-      "id": "backup-configuration",
-      "name": "Sauvegarde Configuration",
-      "description": "Sauvegarde la configuration système et iSCSI pour permettre une restauration rapide en cas de problème.",
-      "category": "system",
-      "level": "atomic",
-      "path": "scripts/atomic/backup-configuration.sh",
-      "inputs": [
-        "repertoires_config",
-        "destination_sauvegarde",
-        "compression_niveau",
-        "retention_jours"
-      ],
-      "outputs": [
-        "archive_sauvegarde",
-        "manifest_fichiers",
-        "rapport_sauvegarde"
-      ],
-      "conditions": [
-        "espace_destination_suffisant",
-        "permissions_lecture_config",
-        "outils_compression_disponibles"
-      ],
-      "dependencies": [],
-      "tags": ["backup", "configuration", "system", "recovery", "archive"],
-      "complexity": "low",
-      "status": "stable",
-      "lastModified": "2025-09-26T12:00:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.1.0",
-      "functions": [
-        {
-          "name": "identify_config_files",
-          "description": "Identifie les fichiers de configuration à sauvegarder",
-          "inputs": ["config_paths"],
-          "outputs": ["file_list"]
-        },
-        {
-          "name": "create_backup_archive",
-          "description": "Crée l'archive de sauvegarde",
-          "inputs": ["file_list", "destination", "compression"],
-          "outputs": ["archive_path"]
-        },
-        {
-          "name": "generate_manifest",
-          "description": "Génère le manifest des fichiers sauvegardés",
-          "inputs": ["archive_path"],
-          "outputs": ["manifest_file"]
-        }
-      ]
-    },
-    {
-      "id": "generate-logs",
-      "name": "Génération de Logs",
-      "description": "Génère des logs structurés pour toutes les opérations du système. Supporte différents niveaux et formats de logging.",
-      "category": "system",
-      "level": "atomic",
-      "path": "scripts/atomic/generate-logs.sh",
-      "inputs": [
-        "niveau_log",
-        "format_sortie",
-        "destination_logs",
-        "rotation_config"
-      ],
-      "outputs": [
-        "fichiers_logs",
-        "index_logs",
-        "statistiques_logging"
-      ],
-      "conditions": [
-        "permissions_ecriture_logs",
-        "espace_stockage_suffisant"
-      ],
-      "dependencies": [],
-      "tags": ["logging", "system", "monitoring", "debugging", "audit"],
-      "complexity": "low",
-      "status": "stable",
-      "lastModified": "2025-09-25T14:30:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.0.0",
-      "functions": [
-        {
-          "name": "setup_log_rotation",
-          "description": "Configure la rotation des logs",
-          "inputs": ["rotation_config"],
-          "outputs": ["rotation_setup"]
-        },
-        {
-          "name": "write_log_entry",
-          "description": "Écrit une entrée de log formatée",
-          "inputs": ["level", "message", "context"],
-          "outputs": ["log_written"]
-        },
-        {
-          "name": "compress_old_logs",
-          "description": "Compresse les anciens fichiers de logs",
-          "inputs": ["log_directory", "age_threshold"],
-          "outputs": ["compression_result"]
-        }
-      ]
-    },
-    {
-      "id": "setup-usb-storage",
-      "name": "Configuration Stockage USB Complète",
-      "description": "Orchestrateur qui coordonne la configuration complète d'un stockage USB : détection, formatage, montage et validation.",
-      "category": "usb",
-      "level": "orchestrator",
-      "path": "scripts/orchestrators/setup-usb-storage.sh",
-      "inputs": [
-        "preferences_utilisateur",
-        "parametres_formatage",
-        "point_montage_cible"
-      ],
-      "outputs": [
-        "stockage_configure",
-        "informations_acces",
-        "rapport_configuration"
-      ],
-      "conditions": [
-        "peripherique_usb_detecte",
-        "permissions_administrateur"
-      ],
-      "dependencies": [
-        "detect-usb",
-        "select-disk",
-        "format-disk",
-        "mount-disk",
-        "validate-storage-integrity"
-      ],
-      "tags": ["usb", "orchestrator", "setup", "workflow", "complete"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-10-03T11:20:00Z",
-      "author": "AtomicOps Team",
-      "version": "2.1.0",
-      "functions": [
-        {
-          "name": "orchestrate_usb_setup",
-          "description": "Orchestre le processus complet de configuration USB",
-          "inputs": ["user_preferences"],
-          "outputs": ["setup_result"]
-        },
-        {
-          "name": "validate_setup_requirements",
-          "description": "Valide que tous les prérequis sont remplis",
-          "inputs": ["requirements"],
-          "outputs": ["validation_result"]
-        },
-        {
-          "name": "handle_setup_errors",
-          "description": "Gère les erreurs pendant la configuration",
-          "inputs": ["error_context"],
-          "outputs": ["error_resolution"]
-        }
-      ]
-    },
-    {
-      "id": "deploy-iscsi-solution",
-      "name": "Déploiement Solution iSCSI Complète",
-      "description": "Orchestrateur pour le déploiement complet d'une solution iSCSI : configuration réseau, cible, authentification et tests.",
-      "category": "iscsi",
-      "level": "orchestrator",
-      "path": "scripts/orchestrators/deploy-iscsi-solution.sh",
-      "inputs": [
-        "configuration_iscsi",
-        "parametres_reseau",
-        "politiques_securite",
-        "tests_validation"
-      ],
-      "outputs": [
-        "solution_deployee",
-        "parametres_connexion",
-        "rapport_tests",
-        "documentation_acces"
-      ],
-      "conditions": [
-        "stockage_source_disponible",
-        "infrastructure_reseau_prete",
-        "outils_iscsi_installes"
-      ],
-      "dependencies": [
-        "setup-iscsi-target",
-        "configure-iscsi-network",
-        "test-iscsi-connection",
-        "backup-configuration"
-      ],
-      "tags": ["iscsi", "orchestrator", "deployment", "network", "complete"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-10-02T17:45:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.8.0",
-      "functions": [
-        {
-          "name": "orchestrate_iscsi_deployment",
-          "description": "Orchestre le déploiement complet iSCSI",
-          "inputs": ["deployment_config"],
-          "outputs": ["deployment_result"]
-        },
-        {
-          "name": "validate_deployment_prerequisites",
-          "description": "Valide les prérequis du déploiement",
-          "inputs": ["prerequisites"],
-          "outputs": ["validation_result"]
-        },
-        {
-          "name": "rollback_deployment",
-          "description": "Effectue un rollback en cas d'échec",
-          "inputs": ["deployment_state"],
-          "outputs": ["rollback_result"]
-        }
-      ]
-    },
-    {
-      "id": "monitor-storage-health",
-      "name": "Surveillance Santé Stockage",
-      "description": "Orchestrateur de surveillance continue de la santé du stockage : monitoring, alertes, maintenance préventive.",
-      "category": "system",
-      "level": "orchestrator",
-      "path": "scripts/orchestrators/monitor-storage-health.sh",
-      "inputs": [
-        "dispositifs_surveilles",
-        "seuils_alerte",
-        "intervalles_controle",
-        "actions_maintenance"
-      ],
-      "outputs": [
-        "rapport_sante",
-        "alertes_actives",
-        "actions_preventives",
-        "historique_surveillance"
-      ],
-      "conditions": [
-        "dispositifs_accessibles",
-        "outils_monitoring_installes"
-      ],
-      "dependencies": [
-        "monitor-system-resources",
-        "validate-storage-integrity",
-        "generate-logs",
-        "backup-configuration"
-      ],
-      "tags": ["monitoring", "orchestrator", "health", "maintenance", "alerting"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-09-30T09:10:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.3.0",
-      "functions": [
-        {
-          "name": "orchestrate_health_monitoring",
-          "description": "Orchestre la surveillance de santé",
-          "inputs": ["monitoring_config"],
-          "outputs": ["monitoring_result"]
-        },
-        {
-          "name": "analyze_health_trends",
-          "description": "Analyse les tendances de santé du stockage",
-          "inputs": ["historical_data"],
-          "outputs": ["trend_analysis"]
-        },
-        {
-          "name": "trigger_maintenance_actions",
-          "description": "Déclenche les actions de maintenance préventive",
-          "inputs": ["health_status", "maintenance_rules"],
-          "outputs": ["maintenance_actions"]
-        }
-      ]
-    },
-    {
-      "id": "usb-to-iscsi-bridge",
-      "name": "Pont USB vers iSCSI Principal",
-      "description": "Script principal qui coordonne la transformation complète d'un stockage USB en solution de stockage iSCSI accessible via réseau.",
-      "category": "network",
-      "level": "main",
-      "path": "scripts/main/usb-to-iscsi-bridge.sh",
-      "inputs": [
-        "configuration_globale",
-        "preferences_utilisateur",
-        "politiques_securite",
-        "parametres_performance"
-      ],
-      "outputs": [
-        "solution_complete",
-        "guide_utilisation",
-        "parametres_acces",
-        "documentation_maintenance"
-      ],
-      "conditions": [
-        "systeme_compatible",
-        "permissions_administrateur",
-        "ressources_suffisantes"
-      ],
-      "dependencies": [
-        "setup-usb-storage",
-        "deploy-iscsi-solution",
-        "monitor-storage-health"
-      ],
-      "tags": ["main", "bridge", "complete-solution", "integration", "production"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-10-04T08:00:00Z",
-      "author": "AtomicOps Team",
-      "version": "3.0.0",
-      "functions": [
-        {
-          "name": "coordinate_complete_solution",
-          "description": "Coordonne la solution complète USB vers iSCSI",
-          "inputs": ["global_config"],
-          "outputs": ["complete_solution"]
-        },
-        {
-          "name": "generate_documentation",
-          "description": "Génère la documentation utilisateur complète",
-          "inputs": ["solution_config"],
-          "outputs": ["user_documentation"]
-        },
-        {
-          "name": "setup_monitoring_dashboard",
-          "description": "Configure le tableau de bord de monitoring",
-          "inputs": ["monitoring_requirements"],
-          "outputs": ["dashboard_config"]
-        }
-      ]
-    },
-    {
-      "id": "disaster-recovery-manager",
-      "name": "Gestionnaire de Récupération d'Urgence",
-      "description": "Script principal pour la gestion de la récupération d'urgence : sauvegarde, restauration, tests de récupération.",
-      "category": "system",
-      "level": "main",
-      "path": "scripts/main/disaster-recovery-manager.sh",
-      "inputs": [
-        "strategie_sauvegarde",
-        "sites_recuperation",
-        "seuils_declenchement",
-        "procedures_escalade"
-      ],
-      "outputs": [
-        "plan_recuperation",
-        "sauvegardes_actuelles",
-        "tests_recuperation",
-        "procedures_documentees"
-      ],
-      "conditions": [
-        "infrastructure_backup_disponible",
-        "procedures_testees",
-        "equipe_astreinte_disponible"
-      ],
-      "dependencies": [
-        "backup-configuration",
-        "validate-storage-integrity",
-        "monitor-storage-health"
-      ],
-      "tags": ["main", "disaster-recovery", "backup", "critical", "business-continuity"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-09-28T15:40:00Z",
-      "author": "AtomicOps Team",
-      "version": "2.2.0",
-      "functions": [
-        {
-          "name": "execute_recovery_plan",
-          "description": "Exécute le plan de récupération d'urgence",
-          "inputs": ["recovery_scenario"],
-          "outputs": ["recovery_result"]
-        },
-        {
-          "name": "test_backup_integrity",
-          "description": "Teste l'intégrité des sauvegardes",
-          "inputs": ["backup_locations"],
-          "outputs": ["integrity_report"]
-        },
-        {
-          "name": "simulate_disaster_scenario",
-          "description": "Simule un scénario de désastre pour test",
-          "inputs": ["scenario_config"],
-          "outputs": ["simulation_result"]
-        }
-      ]
-    },
-    {
-      "id": "performance-optimizer",
-      "name": "Optimiseur de Performance",
-      "description": "Script principal d'optimisation des performances du système de stockage : tuning, cache, compression, déduplication.",
-      "category": "system",
-      "level": "main",
-      "path": "scripts/main/performance-optimizer.sh",
-      "inputs": [
-        "profil_charge_travail",
-        "contraintes_ressources",
-        "objectifs_performance",
-        "seuils_optimisation"
-      ],
-      "outputs": [
-        "configuration_optimisee",
-        "metriques_performance",
-        "recommandations_amelioration",
-        "rapport_optimisation"
-      ],
-      "conditions": [
-        "charge_travail_identifiee",
-        "metriques_baseline_disponibles",
-        "fenetre_maintenance_disponible"
-      ],
-      "dependencies": [
-        "monitor-system-resources",
-        "validate-storage-integrity",
-        "backup-configuration"
-      ],
-      "tags": ["main", "performance", "optimization", "tuning", "efficiency"],
-      "complexity": "high",
-      "status": "testing",
-      "lastModified": "2025-10-01T13:25:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.5.0",
-      "functions": [
-        {
-          "name": "analyze_workload_patterns",
-          "description": "Analyse les patterns de charge de travail",
-          "inputs": ["workload_data"],
-          "outputs": ["pattern_analysis"]
-        },
-        {
-          "name": "apply_optimization_strategies",
-          "description": "Applique les stratégies d'optimisation",
-          "inputs": ["optimization_config"],
-          "outputs": ["optimization_result"]
-        },
-        {
-          "name": "measure_performance_impact",
-          "description": "Mesure l'impact des optimisations sur les performances",
-          "inputs": ["baseline_metrics", "optimized_metrics"],
-          "outputs": ["performance_comparison"]
-        }
-      ]
-    },
-    {
-      "id": "security-audit-manager",
-      "name": "Gestionnaire d'Audit de Sécurité",
-      "description": "Script principal pour l'audit de sécurité du système : vulnérabilités, conformité, hardening, monitoring sécuritaire.",
-      "category": "system",
-      "level": "main",
-      "path": "scripts/main/security-audit-manager.sh",
-      "inputs": [
-        "standards_conformite",
-        "politiques_securite",
-        "scope_audit",
-        "frequence_controles"
-      ],
-      "outputs": [
-        "rapport_audit",
-        "vulnerabilites_detectees",
-        "recommandations_securite",
-        "plan_remediation"
-      ],
-      "conditions": [
-        "outils_audit_installes",
-        "acces_systeme_complet",
-        "references_securite_disponibles"
-      ],
-      "dependencies": [
-        "backup-configuration",
-        "generate-logs",
-        "monitor-system-resources"
-      ],
-      "tags": ["main", "security", "audit", "compliance", "vulnerability"],
-      "complexity": "high",
-      "status": "stable",
-      "lastModified": "2025-09-29T07:50:00Z",
-      "author": "AtomicOps Team",
-      "version": "1.7.0",
-      "functions": [
-        {
-          "name": "execute_security_scan",
-          "description": "Exécute un scan de sécurité complet",
-          "inputs": ["scan_parameters"],
-          "outputs": ["security_report"]
-        },
-        {
-          "name": "assess_compliance_status",
-          "description": "Évalue le statut de conformité",
-          "inputs": ["compliance_standards"],
-          "outputs": ["compliance_assessment"]
-        },
-        {
-          "name": "generate_remediation_plan",
-          "description": "Génère le plan de remédiation",
-          "inputs": ["vulnerabilities", "risk_priorities"],
-          "outputs": ["remediation_plan"]
-        }
-      ]
-    },
-    {
-      "id": "automated-deployment-pipeline",
-      "name": "Pipeline de Déploiement Automatisé",
-      "description": "Script principal pour le déploiement automatisé de la solution complète : CI/CD, tests, validation, rollback automatique.",
-      "category": "system",
-      "level": "main",
-      "path": "scripts/main/automated-deployment-pipeline.sh",
-      "inputs": [
-        "configuration_deploiement",
-        "environnements_cibles",
-        "tests_validation",
-        "criteres_rollback"
-      ],
-      "outputs": [
-        "deploiement_realise",
-        "rapport_tests",
-        "metriques_deploiement",
-        "documentation_changements"
-      ],
-      "conditions": [
-        "environnements_prets",
-        "tests_passes",
-        "approbations_obtenues"
-      ],
-      "dependencies": [
-        "usb-to-iscsi-bridge",
-        "monitor-storage-health",
-        "backup-configuration"
-      ],
-      "tags": ["main", "deployment", "automation", "ci-cd", "validation"],
-      "complexity": "high",
-      "status": "draft",
-      "lastModified": "2025-09-27T18:15:00Z",
-      "author": "AtomicOps Team",
-      "version": "0.9.0",
-      "functions": [
-        {
-          "name": "execute_deployment_pipeline",
-          "description": "Exécute le pipeline de déploiement complet",
-          "inputs": ["pipeline_config"],
-          "outputs": ["deployment_result"]
-        },
-        {
-          "name": "validate_deployment_success",
-          "description": "Valide le succès du déploiement",
-          "inputs": ["validation_criteria"],
-          "outputs": ["validation_result"]
-        },
-        {
-          "name": "handle_deployment_rollback",
-          "description": "Gère le rollback en cas d'échec de déploiement",
-          "inputs": ["rollback_triggers"],
-          "outputs": ["rollback_execution"]
-        }
-      ]
-    }
-  ],
-  "statistics": {
-    "by_category": {
-      "usb": 4,
-      "iscsi": 3,
-      "system": 8,
-      "network": 1,
-      "file": 0
-    },
-    "by_level": {
-      "atomic": 12,
-      "orchestrator": 3,
-      "main": 7
-    },
-    "by_complexity": {
-      "low": 6,
-      "medium": 8,
-      "high": 8
-    },
-    "by_status": {
-      "stable": 19,
-      "testing": 1,
-      "draft": 2
-    },
-    "total_dependencies": 31,
-    "avg_dependencies_per_script": 1.4
-  }
+﻿{
+    "metadata":  {
+                     "version":  "1.1.0",
+                     "generated":  "2025-10-04T16:30:00Z",
+                     "description":  "Base de donnÃ©es des scripts atomiques AtomicOps Suite",
+                     "total_scripts":  43,
+                     "categories":  [
+                                        "usb",
+                                        "iscsi",
+                                        "network",
+                                        "system",
+                                        "file",
+                                        "performance"
+                                    ],
+                     "subcategories":  [
+                                           "cpu",
+                                           "memory",
+                                           "swap",
+                                           "io",
+                                           "network"
+                                       ],
+                     "levels":  [
+                                    "atomic",
+                                    "orchestrator",
+                                    "main"
+                                ]
+                 },
+    "scripts":  [
+                    {
+                        "id":  "select-disk",
+                        "name":  "SÃ©lecteur de Disque USB",
+                        "description":  "Interface interactive pour sÃ©lectionner un disque USB parmi ceux disponibles. Affiche les informations dÃ©taillÃ©es de chaque disque.",
+                        "category":  "usb",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/select-disk.sh",
+                        "inputs":  [
+                                       "liste_disques_disponibles",
+                                       "preferences_utilisateur"
+                                   ],
+                        "outputs":  [
+                                        "disque_selectionne",
+                                        "informations_disque"
+                                    ],
+                        "conditions":  [
+                                           "au_moins_un_disque_detecte",
+                                           "interface_interactive_disponible"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "usb",
+                                     "selection",
+                                     "interactive",
+                                     "validation"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-03T15:30:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.2.0",
+                        "functions":  [
+                                          {
+                                              "name":  "list_available_disks",
+                                              "description":  "Liste tous les disques USB dÃ©tectÃ©s",
+                                              "inputs":  [
+
+                                                         ],
+                                              "outputs":  [
+                                                              "disk_array"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "display_disk_info",
+                                              "description":  "Affiche les informations dÃ©taillÃ©es d\u0027un disque",
+                                              "inputs":  [
+                                                             "disk_device"
+                                                         ],
+                                              "outputs":  [
+                                                              "formatted_info"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "prompt_user_selection",
+                                              "description":  "Invite l\u0027utilisateur Ã  choisir un disque",
+                                              "inputs":  [
+                                                             "disk_list"
+                                                         ],
+                                              "outputs":  [
+                                                              "selected_disk"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "format-disk",
+                        "name":  "Formatage de Disque USB",
+                        "description":  "Formate un disque USB avec le systÃ¨me de fichiers spÃ©cifiÃ© (ext4, vfat, ntfs). Inclut la vÃ©rification de sÃ©curitÃ© et la confirmation utilisateur.",
+                        "category":  "usb",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/format-disk.sh",
+                        "inputs":  [
+                                       "disque_cible",
+                                       "systeme_fichiers",
+                                       "label_volume",
+                                       "options_formatage"
+                                   ],
+                        "outputs":  [
+                                        "disque_formate",
+                                        "rapport_formatage",
+                                        "nouvel_uuid"
+                                    ],
+                        "conditions":  [
+                                           "disque_non_monte",
+                                           "permissions_administrateur",
+                                           "confirmation_utilisateur",
+                                           "espace_suffisant"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "usb",
+                                     "format",
+                                     "destructive",
+                                     "filesystem",
+                                     "security"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-02T09:15:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.1.0",
+                        "functions":  [
+                                          {
+                                              "name":  "check_disk_status",
+                                              "description":  "VÃ©rifie que le disque peut Ãªtre formatÃ©",
+                                              "inputs":  [
+                                                             "disk_device"
+                                                         ],
+                                              "outputs":  [
+                                                              "status_check"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "unmount_disk",
+                                              "description":  "DÃ©monte le disque s\u0027il est montÃ©",
+                                              "inputs":  [
+                                                             "disk_device"
+                                                         ],
+                                              "outputs":  [
+                                                              "unmount_success"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "format_with_filesystem",
+                                              "description":  "Effectue le formatage avec le systÃ¨me spÃ©cifiÃ©",
+                                              "inputs":  [
+                                                             "disk_device",
+                                                             "fs_type",
+                                                             "label"
+                                                         ],
+                                              "outputs":  [
+                                                              "format_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "verify_format",
+                                              "description":  "VÃ©rifie l\u0027intÃ©gritÃ© du formatage",
+                                              "inputs":  [
+                                                             "disk_device"
+                                                         ],
+                                              "outputs":  [
+                                                              "verification_report"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "mount-disk",
+                        "name":  "Montage de Disque USB",
+                        "description":  "Monte un disque USB Ã  l\u0027emplacement spÃ©cifiÃ© avec les options appropriÃ©es. GÃ¨re les permissions et la crÃ©ation du point de montage.",
+                        "category":  "usb",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/mount-disk.sh",
+                        "inputs":  [
+                                       "disque_source",
+                                       "point_montage",
+                                       "options_montage",
+                                       "permissions_cible"
+                                   ],
+                        "outputs":  [
+                                        "disque_monte",
+                                        "chemin_acces",
+                                        "informations_montage"
+                                    ],
+                        "conditions":  [
+                                           "disque_non_monte",
+                                           "point_montage_disponible",
+                                           "permissions_suffisantes"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "usb",
+                                     "mount",
+                                     "filesystem",
+                                     "permissions"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-01T14:22:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "functions":  [
+                                          {
+                                              "name":  "create_mount_point",
+                                              "description":  "CrÃ©e le rÃ©pertoire de montage si nÃ©cessaire",
+                                              "inputs":  [
+                                                             "mount_path"
+                                                         ],
+                                              "outputs":  [
+                                                              "creation_success"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "mount_device",
+                                              "description":  "Monte le pÃ©riphÃ©rique au point spÃ©cifiÃ©",
+                                              "inputs":  [
+                                                             "device",
+                                                             "mount_point",
+                                                             "options"
+                                                         ],
+                                              "outputs":  [
+                                                              "mount_success"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "set_permissions",
+                                              "description":  "Configure les permissions du point de montage",
+                                              "inputs":  [
+                                                             "mount_path",
+                                                             "permissions"
+                                                         ],
+                                              "outputs":  [
+                                                              "permissions_set"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "detect-usb",
+                        "name":  "DÃ©tection USB",
+                        "description":  "DÃ©tecte et liste tous les pÃ©riphÃ©riques de stockage USB connectÃ©s au systÃ¨me. Fournit des informations dÃ©taillÃ©es sur chaque pÃ©riphÃ©rique.",
+                        "category":  "usb",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/detect-usb.sh",
+                        "inputs":  [
+                                       "criteres_filtrage",
+                                       "niveau_detail"
+                                   ],
+                        "outputs":  [
+                                        "liste_peripheriques",
+                                        "informations_detaillees",
+                                        "statuts_montage"
+                                    ],
+                        "conditions":  [
+                                           "systeme_udev_disponible",
+                                           "permissions_lecture"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "usb",
+                                     "detection",
+                                     "hardware",
+                                     "listing"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-30T11:45:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.3.0",
+                        "functions":  [
+                                          {
+                                              "name":  "scan_usb_devices",
+                                              "description":  "Scanne tous les pÃ©riphÃ©riques USB",
+                                              "inputs":  [
+
+                                                         ],
+                                              "outputs":  [
+                                                              "device_list"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "get_device_info",
+                                              "description":  "RÃ©cupÃ¨re les informations dÃ©taillÃ©es d\u0027un pÃ©riphÃ©rique",
+                                              "inputs":  [
+                                                             "device_id"
+                                                         ],
+                                              "outputs":  [
+                                                              "device_details"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "check_mount_status",
+                                              "description":  "VÃ©rifie le statut de montage des pÃ©riphÃ©riques",
+                                              "inputs":  [
+                                                             "device_list"
+                                                         ],
+                                              "outputs":  [
+                                                              "mount_status_array"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "setup-iscsi-target",
+                        "name":  "Configuration Cible iSCSI",
+                        "description":  "Configure une cible iSCSI avec targetcli-fb pour partager le stockage USB via le rÃ©seau. GÃ¨re l\u0027authentification et les ACL.",
+                        "category":  "iscsi",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/setup-iscsi-target.sh",
+                        "inputs":  [
+                                       "chemin_stockage",
+                                       "nom_cible",
+                                       "iqn_initiateur",
+                                       "parametres_auth"
+                                   ],
+                        "outputs":  [
+                                        "cible_configuree",
+                                        "informations_connexion",
+                                        "parametres_acl"
+                                    ],
+                        "conditions":  [
+                                           "targetcli_installe",
+                                           "stockage_accessible",
+                                           "permissions_administrateur",
+                                           "ports_disponibles"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "iscsi",
+                                     "target",
+                                     "network",
+                                     "storage",
+                                     "authentication"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-02T16:10:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "2.0.0",
+                        "functions":  [
+                                          {
+                                              "name":  "create_backstore",
+                                              "description":  "CrÃ©e le backstore pour la cible iSCSI",
+                                              "inputs":  [
+                                                             "storage_path",
+                                                             "backstore_name"
+                                                         ],
+                                              "outputs":  [
+                                                              "backstore_object"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "create_target",
+                                              "description":  "CrÃ©e la cible iSCSI avec l\u0027IQN spÃ©cifiÃ©",
+                                              "inputs":  [
+                                                             "target_iqn"
+                                                         ],
+                                              "outputs":  [
+                                                              "target_object"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "configure_lun",
+                                              "description":  "Configure le LUN et l\u0027associe au backstore",
+                                              "inputs":  [
+                                                             "target_object",
+                                                             "backstore_object"
+                                                         ],
+                                              "outputs":  [
+                                                              "lun_configured"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "setup_acl",
+                                              "description":  "Configure les ACL et l\u0027authentification",
+                                              "inputs":  [
+                                                             "target_object",
+                                                             "initiator_iqn",
+                                                             "auth_params"
+                                                         ],
+                                              "outputs":  [
+                                                              "acl_configured"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "configure-iscsi-network",
+                        "name":  "Configuration RÃ©seau iSCSI",
+                        "description":  "Configure les paramÃ¨tres rÃ©seau pour iSCSI : interfaces, ports, firewall. Optimise les performances rÃ©seau pour le stockage.",
+                        "category":  "iscsi",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/configure-iscsi-network.sh",
+                        "inputs":  [
+                                       "interface_reseau",
+                                       "adresse_ip",
+                                       "port_iscsi",
+                                       "regles_firewall"
+                                   ],
+                        "outputs":  [
+                                        "reseau_configure",
+                                        "regles_firewall_actives",
+                                        "parametres_optimises"
+                                    ],
+                        "conditions":  [
+                                           "interface_disponible",
+                                           "adresse_ip_libre",
+                                           "firewall_accessible"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "iscsi",
+                                     "network",
+                                     "firewall",
+                                     "performance",
+                                     "configuration"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-28T13:20:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.4.0",
+                        "functions":  [
+                                          {
+                                              "name":  "configure_interface",
+                                              "description":  "Configure l\u0027interface rÃ©seau pour iSCSI",
+                                              "inputs":  [
+                                                             "interface",
+                                                             "ip_address"
+                                                         ],
+                                              "outputs":  [
+                                                              "interface_configured"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "setup_firewall_rules",
+                                              "description":  "Configure les rÃ¨gles de firewall pour iSCSI",
+                                              "inputs":  [
+                                                             "port",
+                                                             "interface"
+                                                         ],
+                                              "outputs":  [
+                                                              "firewall_rules_set"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "optimize_network_params",
+                                              "description":  "Optimise les paramÃ¨tres rÃ©seau pour les performances",
+                                              "inputs":  [
+                                                             "interface"
+                                                         ],
+                                              "outputs":  [
+                                                              "optimization_applied"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "test-iscsi-connection",
+                        "name":  "Test Connexion iSCSI",
+                        "description":  "Teste la connectivitÃ© et les performances d\u0027une connexion iSCSI. Valide l\u0027authentification et mesure les performances.",
+                        "category":  "iscsi",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/test-iscsi-connection.sh",
+                        "inputs":  [
+                                       "adresse_cible",
+                                       "iqn_cible",
+                                       "parametres_auth",
+                                       "tests_performance"
+                                   ],
+                        "outputs":  [
+                                        "rapport_connectivite",
+                                        "metriques_performance",
+                                        "statut_authentification"
+                                    ],
+                        "conditions":  [
+                                           "cible_accessible",
+                                           "outils_test_disponibles"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "iscsi",
+                                     "test",
+                                     "connectivity",
+                                     "performance",
+                                     "validation"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-29T10:30:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.1.0",
+                        "functions":  [
+                                          {
+                                              "name":  "test_connectivity",
+                                              "description":  "Teste la connectivitÃ© rÃ©seau vers la cible",
+                                              "inputs":  [
+                                                             "target_address",
+                                                             "port"
+                                                         ],
+                                              "outputs":  [
+                                                              "connectivity_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "test_authentication",
+                                              "description":  "Teste l\u0027authentification iSCSI",
+                                              "inputs":  [
+                                                             "target_iqn",
+                                                             "auth_params"
+                                                         ],
+                                              "outputs":  [
+                                                              "auth_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "measure_performance",
+                                              "description":  "Mesure les performances de la connexion",
+                                              "inputs":  [
+                                                             "target_iqn"
+                                                         ],
+                                              "outputs":  [
+                                                              "performance_metrics"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "validate-storage-integrity",
+                        "name":  "Validation IntÃ©gritÃ© Stockage",
+                        "description":  "Valide l\u0027intÃ©gritÃ© du stockage USB avant et aprÃ¨s le partage iSCSI. Effectue des tests de lecture/Ã©criture et de checksums.",
+                        "category":  "system",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/validate-storage-integrity.sh",
+                        "inputs":  [
+                                       "peripherique_stockage",
+                                       "niveau_test",
+                                       "fichiers_test",
+                                       "checksums_reference"
+                                   ],
+                        "outputs":  [
+                                        "rapport_integrite",
+                                        "resultats_tests",
+                                        "erreurs_detectees"
+                                    ],
+                        "conditions":  [
+                                           "stockage_accessible",
+                                           "permissions_lecture_ecriture",
+                                           "espace_temporaire_disponible"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "storage",
+                                     "validation",
+                                     "integrity",
+                                     "testing",
+                                     "checksum"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-01T08:45:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.2.0",
+                        "functions":  [
+                                          {
+                                              "name":  "run_surface_scan",
+                                              "description":  "Effectue un scan de surface du stockage",
+                                              "inputs":  [
+                                                             "device_path"
+                                                         ],
+                                              "outputs":  [
+                                                              "scan_results"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "test_read_write",
+                                              "description":  "Teste les opÃ©rations de lecture/Ã©criture",
+                                              "inputs":  [
+                                                             "device_path",
+                                                             "test_size"
+                                                         ],
+                                              "outputs":  [
+                                                              "rw_test_results"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "verify_checksums",
+                                              "description":  "VÃ©rifie les checksums des fichiers",
+                                              "inputs":  [
+                                                             "file_list",
+                                                             "reference_checksums"
+                                                         ],
+                                              "outputs":  [
+                                                              "checksum_validation"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "monitor-system-resources",
+                        "name":  "Monitoring Ressources SystÃ¨me",
+                        "description":  "Surveille l\u0027utilisation des ressources systÃ¨me (CPU, mÃ©moire, I/O) pendant les opÃ©rations de stockage. GÃ©nÃ¨re des alertes si nÃ©cessaire.",
+                        "category":  "system",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/monitor-system-resources.sh",
+                        "inputs":  [
+                                       "seuils_alerte",
+                                       "duree_monitoring",
+                                       "intervalles_mesure"
+                                   ],
+                        "outputs":  [
+                                        "metriques_systeme",
+                                        "alertes_generees",
+                                        "historique_utilisation"
+                                    ],
+                        "conditions":  [
+                                           "outils_monitoring_disponibles",
+                                           "permissions_lecture_proc"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "system",
+                                     "monitoring",
+                                     "performance",
+                                     "resources",
+                                     "alerting"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-27T16:55:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "functions":  [
+                                          {
+                                              "name":  "collect_cpu_metrics",
+                                              "description":  "Collecte les mÃ©triques d\u0027utilisation CPU",
+                                              "inputs":  [
+                                                             "interval"
+                                                         ],
+                                              "outputs":  [
+                                                              "cpu_metrics"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "collect_memory_metrics",
+                                              "description":  "Collecte les mÃ©triques d\u0027utilisation mÃ©moire",
+                                              "inputs":  [
+                                                             "interval"
+                                                         ],
+                                              "outputs":  [
+                                                              "memory_metrics"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "collect_io_metrics",
+                                              "description":  "Collecte les mÃ©triques d\u0027I/O disque",
+                                              "inputs":  [
+                                                             "devices",
+                                                             "interval"
+                                                         ],
+                                              "outputs":  [
+                                                              "io_metrics"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "check_thresholds",
+                                              "description":  "VÃ©rifie les seuils d\u0027alerte",
+                                              "inputs":  [
+                                                             "metrics",
+                                                             "thresholds"
+                                                         ],
+                                              "outputs":  [
+                                                              "alerts"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "backup-configuration",
+                        "name":  "Sauvegarde Configuration",
+                        "description":  "Sauvegarde la configuration systÃ¨me et iSCSI pour permettre une restauration rapide en cas de problÃ¨me.",
+                        "category":  "system",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/backup-configuration.sh",
+                        "inputs":  [
+                                       "repertoires_config",
+                                       "destination_sauvegarde",
+                                       "compression_niveau",
+                                       "retention_jours"
+                                   ],
+                        "outputs":  [
+                                        "archive_sauvegarde",
+                                        "manifest_fichiers",
+                                        "rapport_sauvegarde"
+                                    ],
+                        "conditions":  [
+                                           "espace_destination_suffisant",
+                                           "permissions_lecture_config",
+                                           "outils_compression_disponibles"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "backup",
+                                     "configuration",
+                                     "system",
+                                     "recovery",
+                                     "archive"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-26T12:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.1.0",
+                        "functions":  [
+                                          {
+                                              "name":  "identify_config_files",
+                                              "description":  "Identifie les fichiers de configuration Ã  sauvegarder",
+                                              "inputs":  [
+                                                             "config_paths"
+                                                         ],
+                                              "outputs":  [
+                                                              "file_list"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "create_backup_archive",
+                                              "description":  "CrÃ©e l\u0027archive de sauvegarde",
+                                              "inputs":  [
+                                                             "file_list",
+                                                             "destination",
+                                                             "compression"
+                                                         ],
+                                              "outputs":  [
+                                                              "archive_path"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "generate_manifest",
+                                              "description":  "GÃ©nÃ¨re le manifest des fichiers sauvegardÃ©s",
+                                              "inputs":  [
+                                                             "archive_path"
+                                                         ],
+                                              "outputs":  [
+                                                              "manifest_file"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "generate-logs",
+                        "name":  "GÃ©nÃ©ration de Logs",
+                        "description":  "GÃ©nÃ¨re des logs structurÃ©s pour toutes les opÃ©rations du systÃ¨me. Supporte diffÃ©rents niveaux et formats de logging.",
+                        "category":  "system",
+                        "level":  "atomic",
+                        "path":  "scripts/atomic/generate-logs.sh",
+                        "inputs":  [
+                                       "niveau_log",
+                                       "format_sortie",
+                                       "destination_logs",
+                                       "rotation_config"
+                                   ],
+                        "outputs":  [
+                                        "fichiers_logs",
+                                        "index_logs",
+                                        "statistiques_logging"
+                                    ],
+                        "conditions":  [
+                                           "permissions_ecriture_logs",
+                                           "espace_stockage_suffisant"
+                                       ],
+                        "dependencies":  [
+
+                                         ],
+                        "tags":  [
+                                     "logging",
+                                     "system",
+                                     "monitoring",
+                                     "debugging",
+                                     "audit"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-25T14:30:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "functions":  [
+                                          {
+                                              "name":  "setup_log_rotation",
+                                              "description":  "Configure la rotation des logs",
+                                              "inputs":  [
+                                                             "rotation_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "rotation_setup"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "write_log_entry",
+                                              "description":  "Ã‰crit une entrÃ©e de log formatÃ©e",
+                                              "inputs":  [
+                                                             "level",
+                                                             "message",
+                                                             "context"
+                                                         ],
+                                              "outputs":  [
+                                                              "log_written"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "compress_old_logs",
+                                              "description":  "Compresse les anciens fichiers de logs",
+                                              "inputs":  [
+                                                             "log_directory",
+                                                             "age_threshold"
+                                                         ],
+                                              "outputs":  [
+                                                              "compression_result"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "setup-usb-storage",
+                        "name":  "Configuration Stockage USB ComplÃ¨te",
+                        "description":  "Orchestrateur qui coordonne la configuration complÃ¨te d\u0027un stockage USB : dÃ©tection, formatage, montage et validation.",
+                        "category":  "usb",
+                        "level":  "orchestrator",
+                        "path":  "scripts/orchestrators/setup-usb-storage.sh",
+                        "inputs":  [
+                                       "preferences_utilisateur",
+                                       "parametres_formatage",
+                                       "point_montage_cible"
+                                   ],
+                        "outputs":  [
+                                        "stockage_configure",
+                                        "informations_acces",
+                                        "rapport_configuration"
+                                    ],
+                        "conditions":  [
+                                           "peripherique_usb_detecte",
+                                           "permissions_administrateur"
+                                       ],
+                        "dependencies":  [
+                                             "detect-usb",
+                                             "select-disk",
+                                             "format-disk",
+                                             "mount-disk",
+                                             "validate-storage-integrity"
+                                         ],
+                        "tags":  [
+                                     "usb",
+                                     "orchestrator",
+                                     "setup",
+                                     "workflow",
+                                     "complete"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-03T11:20:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "2.1.0",
+                        "functions":  [
+                                          {
+                                              "name":  "orchestrate_usb_setup",
+                                              "description":  "Orchestre le processus complet de configuration USB",
+                                              "inputs":  [
+                                                             "user_preferences"
+                                                         ],
+                                              "outputs":  [
+                                                              "setup_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "validate_setup_requirements",
+                                              "description":  "Valide que tous les prÃ©requis sont remplis",
+                                              "inputs":  [
+                                                             "requirements"
+                                                         ],
+                                              "outputs":  [
+                                                              "validation_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "handle_setup_errors",
+                                              "description":  "GÃ¨re les erreurs pendant la configuration",
+                                              "inputs":  [
+                                                             "error_context"
+                                                         ],
+                                              "outputs":  [
+                                                              "error_resolution"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "deploy-iscsi-solution",
+                        "name":  "DÃ©ploiement Solution iSCSI ComplÃ¨te",
+                        "description":  "Orchestrateur pour le dÃ©ploiement complet d\u0027une solution iSCSI : configuration rÃ©seau, cible, authentification et tests.",
+                        "category":  "iscsi",
+                        "level":  "orchestrator",
+                        "path":  "scripts/orchestrators/deploy-iscsi-solution.sh",
+                        "inputs":  [
+                                       "configuration_iscsi",
+                                       "parametres_reseau",
+                                       "politiques_securite",
+                                       "tests_validation"
+                                   ],
+                        "outputs":  [
+                                        "solution_deployee",
+                                        "parametres_connexion",
+                                        "rapport_tests",
+                                        "documentation_acces"
+                                    ],
+                        "conditions":  [
+                                           "stockage_source_disponible",
+                                           "infrastructure_reseau_prete",
+                                           "outils_iscsi_installes"
+                                       ],
+                        "dependencies":  [
+                                             "setup-iscsi-target",
+                                             "configure-iscsi-network",
+                                             "test-iscsi-connection",
+                                             "backup-configuration"
+                                         ],
+                        "tags":  [
+                                     "iscsi",
+                                     "orchestrator",
+                                     "deployment",
+                                     "network",
+                                     "complete"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-02T17:45:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.8.0",
+                        "functions":  [
+                                          {
+                                              "name":  "orchestrate_iscsi_deployment",
+                                              "description":  "Orchestre le dÃ©ploiement complet iSCSI",
+                                              "inputs":  [
+                                                             "deployment_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "deployment_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "validate_deployment_prerequisites",
+                                              "description":  "Valide les prÃ©requis du dÃ©ploiement",
+                                              "inputs":  [
+                                                             "prerequisites"
+                                                         ],
+                                              "outputs":  [
+                                                              "validation_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "rollback_deployment",
+                                              "description":  "Effectue un rollback en cas d\u0027Ã©chec",
+                                              "inputs":  [
+                                                             "deployment_state"
+                                                         ],
+                                              "outputs":  [
+                                                              "rollback_result"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "monitor-storage-health",
+                        "name":  "Surveillance SantÃ© Stockage",
+                        "description":  "Orchestrateur de surveillance continue de la santÃ© du stockage : monitoring, alertes, maintenance prÃ©ventive.",
+                        "category":  "system",
+                        "level":  "orchestrator",
+                        "path":  "scripts/orchestrators/monitor-storage-health.sh",
+                        "inputs":  [
+                                       "dispositifs_surveilles",
+                                       "seuils_alerte",
+                                       "intervalles_controle",
+                                       "actions_maintenance"
+                                   ],
+                        "outputs":  [
+                                        "rapport_sante",
+                                        "alertes_actives",
+                                        "actions_preventives",
+                                        "historique_surveillance"
+                                    ],
+                        "conditions":  [
+                                           "dispositifs_accessibles",
+                                           "outils_monitoring_installes"
+                                       ],
+                        "dependencies":  [
+                                             "monitor-system-resources",
+                                             "validate-storage-integrity",
+                                             "generate-logs",
+                                             "backup-configuration"
+                                         ],
+                        "tags":  [
+                                     "monitoring",
+                                     "orchestrator",
+                                     "health",
+                                     "maintenance",
+                                     "alerting"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-30T09:10:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.3.0",
+                        "functions":  [
+                                          {
+                                              "name":  "orchestrate_health_monitoring",
+                                              "description":  "Orchestre la surveillance de santÃ©",
+                                              "inputs":  [
+                                                             "monitoring_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "monitoring_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "analyze_health_trends",
+                                              "description":  "Analyse les tendances de santÃ© du stockage",
+                                              "inputs":  [
+                                                             "historical_data"
+                                                         ],
+                                              "outputs":  [
+                                                              "trend_analysis"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "trigger_maintenance_actions",
+                                              "description":  "DÃ©clenche les actions de maintenance prÃ©ventive",
+                                              "inputs":  [
+                                                             "health_status",
+                                                             "maintenance_rules"
+                                                         ],
+                                              "outputs":  [
+                                                              "maintenance_actions"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "usb-to-iscsi-bridge",
+                        "name":  "Pont USB vers iSCSI Principal",
+                        "description":  "Script principal qui coordonne la transformation complÃ¨te d\u0027un stockage USB en solution de stockage iSCSI accessible via rÃ©seau.",
+                        "category":  "network",
+                        "level":  "main",
+                        "path":  "scripts/main/usb-to-iscsi-bridge.sh",
+                        "inputs":  [
+                                       "configuration_globale",
+                                       "preferences_utilisateur",
+                                       "politiques_securite",
+                                       "parametres_performance"
+                                   ],
+                        "outputs":  [
+                                        "solution_complete",
+                                        "guide_utilisation",
+                                        "parametres_acces",
+                                        "documentation_maintenance"
+                                    ],
+                        "conditions":  [
+                                           "systeme_compatible",
+                                           "permissions_administrateur",
+                                           "ressources_suffisantes"
+                                       ],
+                        "dependencies":  [
+                                             "setup-usb-storage",
+                                             "deploy-iscsi-solution",
+                                             "monitor-storage-health"
+                                         ],
+                        "tags":  [
+                                     "main",
+                                     "bridge",
+                                     "complete-solution",
+                                     "integration",
+                                     "production"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T08:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "3.0.0",
+                        "functions":  [
+                                          {
+                                              "name":  "coordinate_complete_solution",
+                                              "description":  "Coordonne la solution complÃ¨te USB vers iSCSI",
+                                              "inputs":  [
+                                                             "global_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "complete_solution"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "generate_documentation",
+                                              "description":  "GÃ©nÃ¨re la documentation utilisateur complÃ¨te",
+                                              "inputs":  [
+                                                             "solution_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "user_documentation"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "setup_monitoring_dashboard",
+                                              "description":  "Configure le tableau de bord de monitoring",
+                                              "inputs":  [
+                                                             "monitoring_requirements"
+                                                         ],
+                                              "outputs":  [
+                                                              "dashboard_config"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "disaster-recovery-manager",
+                        "name":  "Gestionnaire de RÃ©cupÃ©ration d\u0027Urgence",
+                        "description":  "Script principal pour la gestion de la rÃ©cupÃ©ration d\u0027urgence : sauvegarde, restauration, tests de rÃ©cupÃ©ration.",
+                        "category":  "system",
+                        "level":  "main",
+                        "path":  "scripts/main/disaster-recovery-manager.sh",
+                        "inputs":  [
+                                       "strategie_sauvegarde",
+                                       "sites_recuperation",
+                                       "seuils_declenchement",
+                                       "procedures_escalade"
+                                   ],
+                        "outputs":  [
+                                        "plan_recuperation",
+                                        "sauvegardes_actuelles",
+                                        "tests_recuperation",
+                                        "procedures_documentees"
+                                    ],
+                        "conditions":  [
+                                           "infrastructure_backup_disponible",
+                                           "procedures_testees",
+                                           "equipe_astreinte_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "backup-configuration",
+                                             "validate-storage-integrity",
+                                             "monitor-storage-health"
+                                         ],
+                        "tags":  [
+                                     "main",
+                                     "disaster-recovery",
+                                     "backup",
+                                     "critical",
+                                     "business-continuity"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-28T15:40:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "2.2.0",
+                        "functions":  [
+                                          {
+                                              "name":  "execute_recovery_plan",
+                                              "description":  "ExÃ©cute le plan de rÃ©cupÃ©ration d\u0027urgence",
+                                              "inputs":  [
+                                                             "recovery_scenario"
+                                                         ],
+                                              "outputs":  [
+                                                              "recovery_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "test_backup_integrity",
+                                              "description":  "Teste l\u0027intÃ©gritÃ© des sauvegardes",
+                                              "inputs":  [
+                                                             "backup_locations"
+                                                         ],
+                                              "outputs":  [
+                                                              "integrity_report"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "simulate_disaster_scenario",
+                                              "description":  "Simule un scÃ©nario de dÃ©sastre pour test",
+                                              "inputs":  [
+                                                             "scenario_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "simulation_result"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "performance-optimizer",
+                        "name":  "Optimiseur de Performance",
+                        "description":  "Script principal d\u0027optimisation des performances du systÃ¨me de stockage : tuning, cache, compression, dÃ©duplication.",
+                        "category":  "system",
+                        "level":  "main",
+                        "path":  "scripts/main/performance-optimizer.sh",
+                        "inputs":  [
+                                       "profil_charge_travail",
+                                       "contraintes_ressources",
+                                       "objectifs_performance",
+                                       "seuils_optimisation"
+                                   ],
+                        "outputs":  [
+                                        "configuration_optimisee",
+                                        "metriques_performance",
+                                        "recommandations_amelioration",
+                                        "rapport_optimisation"
+                                    ],
+                        "conditions":  [
+                                           "charge_travail_identifiee",
+                                           "metriques_baseline_disponibles",
+                                           "fenetre_maintenance_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "monitor-system-resources",
+                                             "validate-storage-integrity",
+                                             "backup-configuration"
+                                         ],
+                        "tags":  [
+                                     "main",
+                                     "performance",
+                                     "optimization",
+                                     "tuning",
+                                     "efficiency"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "testing",
+                        "lastModified":  "2025-10-01T13:25:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.5.0",
+                        "functions":  [
+                                          {
+                                              "name":  "analyze_workload_patterns",
+                                              "description":  "Analyse les patterns de charge de travail",
+                                              "inputs":  [
+                                                             "workload_data"
+                                                         ],
+                                              "outputs":  [
+                                                              "pattern_analysis"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "apply_optimization_strategies",
+                                              "description":  "Applique les stratÃ©gies d\u0027optimisation",
+                                              "inputs":  [
+                                                             "optimization_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "optimization_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "measure_performance_impact",
+                                              "description":  "Mesure l\u0027impact des optimisations sur les performances",
+                                              "inputs":  [
+                                                             "baseline_metrics",
+                                                             "optimized_metrics"
+                                                         ],
+                                              "outputs":  [
+                                                              "performance_comparison"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "security-audit-manager",
+                        "name":  "Gestionnaire d\u0027Audit de SÃ©curitÃ©",
+                        "description":  "Script principal pour l\u0027audit de sÃ©curitÃ© du systÃ¨me : vulnÃ©rabilitÃ©s, conformitÃ©, hardening, monitoring sÃ©curitaire.",
+                        "category":  "system",
+                        "level":  "main",
+                        "path":  "scripts/main/security-audit-manager.sh",
+                        "inputs":  [
+                                       "standards_conformite",
+                                       "politiques_securite",
+                                       "scope_audit",
+                                       "frequence_controles"
+                                   ],
+                        "outputs":  [
+                                        "rapport_audit",
+                                        "vulnerabilites_detectees",
+                                        "recommandations_securite",
+                                        "plan_remediation"
+                                    ],
+                        "conditions":  [
+                                           "outils_audit_installes",
+                                           "acces_systeme_complet",
+                                           "references_securite_disponibles"
+                                       ],
+                        "dependencies":  [
+                                             "backup-configuration",
+                                             "generate-logs",
+                                             "monitor-system-resources"
+                                         ],
+                        "tags":  [
+                                     "main",
+                                     "security",
+                                     "audit",
+                                     "compliance",
+                                     "vulnerability"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-09-29T07:50:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.7.0",
+                        "functions":  [
+                                          {
+                                              "name":  "execute_security_scan",
+                                              "description":  "ExÃ©cute un scan de sÃ©curitÃ© complet",
+                                              "inputs":  [
+                                                             "scan_parameters"
+                                                         ],
+                                              "outputs":  [
+                                                              "security_report"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "assess_compliance_status",
+                                              "description":  "Ã‰value le statut de conformitÃ©",
+                                              "inputs":  [
+                                                             "compliance_standards"
+                                                         ],
+                                              "outputs":  [
+                                                              "compliance_assessment"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "generate_remediation_plan",
+                                              "description":  "GÃ©nÃ¨re le plan de remÃ©diation",
+                                              "inputs":  [
+                                                             "vulnerabilities",
+                                                             "risk_priorities"
+                                                         ],
+                                              "outputs":  [
+                                                              "remediation_plan"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "automated-deployment-pipeline",
+                        "name":  "Pipeline de DÃ©ploiement AutomatisÃ©",
+                        "description":  "Script principal pour le dÃ©ploiement automatisÃ© de la solution complÃ¨te : CI/CD, tests, validation, rollback automatique.",
+                        "category":  "system",
+                        "level":  "main",
+                        "path":  "scripts/main/automated-deployment-pipeline.sh",
+                        "inputs":  [
+                                       "configuration_deploiement",
+                                       "environnements_cibles",
+                                       "tests_validation",
+                                       "criteres_rollback"
+                                   ],
+                        "outputs":  [
+                                        "deploiement_realise",
+                                        "rapport_tests",
+                                        "metriques_deploiement",
+                                        "documentation_changements"
+                                    ],
+                        "conditions":  [
+                                           "environnements_prets",
+                                           "tests_passes",
+                                           "approbations_obtenues"
+                                       ],
+                        "dependencies":  [
+                                             "usb-to-iscsi-bridge",
+                                             "monitor-storage-health",
+                                             "backup-configuration"
+                                         ],
+                        "tags":  [
+                                     "main",
+                                     "deployment",
+                                     "automation",
+                                     "ci-cd",
+                                     "validation"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "draft",
+                        "lastModified":  "2025-09-27T18:15:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "0.9.0",
+                        "functions":  [
+                                          {
+                                              "name":  "execute_deployment_pipeline",
+                                              "description":  "ExÃ©cute le pipeline de dÃ©ploiement complet",
+                                              "inputs":  [
+                                                             "pipeline_config"
+                                                         ],
+                                              "outputs":  [
+                                                              "deployment_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "validate_deployment_success",
+                                              "description":  "Valide le succÃ¨s du dÃ©ploiement",
+                                              "inputs":  [
+                                                             "validation_criteria"
+                                                         ],
+                                              "outputs":  [
+                                                              "validation_result"
+                                                          ]
+                                          },
+                                          {
+                                              "name":  "handle_deployment_rollback",
+                                              "description":  "GÃ¨re le rollback en cas d\u0027Ã©chec de dÃ©ploiement",
+                                              "inputs":  [
+                                                             "rollback_triggers"
+                                                         ],
+                                              "outputs":  [
+                                                              "rollback_execution"
+                                                          ]
+                                          }
+                                      ]
+                    },
+                    {
+                        "id":  "get-cpu-info",
+                        "name":  "Informations CPU",
+                        "description":  "Collecte des informations dÃ©taillÃ©es sur le processeur : modÃ¨le, frÃ©quences, architecture, caches, flags CPU et statistiques d\u0027utilisation.",
+                        "category":  "performance",
+                        "subcategory":  "cpu",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/cpu/get-cpu.info.sh",
+                        "inputs":  [
+                                       "format_sortie",
+                                       "niveau_detail"
+                                   ],
+                        "outputs":  [
+                                        "informations_cpu",
+                                        "statistiques_usage",
+                                        "details_architecture"
+                                    ],
+                        "conditions":  [
+                                           "acces_proc_cpuinfo",
+                                           "lscpu_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "lscpu",
+                                             "proc filesystem"
+                                         ],
+                        "tags":  [
+                                     "cpu",
+                                     "info",
+                                     "monitoring",
+                                     "hardware"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-cpu-temperature",
+                        "name":  "TempÃ©rature CPU",
+                        "description":  "Surveille la tempÃ©rature des processeurs et cÅ“urs individuels. DÃ©tecte les seuils critiques et fournit des alertes de surchauffe.",
+                        "category":  "performance",
+                        "subcategory":  "cpu",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/cpu/get-cpu.temperature.sh",
+                        "inputs":  [
+                                       "seuils_alerte",
+                                       "format_sortie"
+                                   ],
+                        "outputs":  [
+                                        "temperatures_coeurs",
+                                        "alertes_thermiques",
+                                        "statut_refroidissement"
+                                    ],
+                        "conditions":  [
+                                           "sensors_disponible",
+                                           "acces_thermal_zone"
+                                       ],
+                        "dependencies":  [
+                                             "lm-sensors",
+                                             "thermal zones"
+                                         ],
+                        "tags":  [
+                                     "cpu",
+                                     "temperature",
+                                     "monitoring",
+                                     "thermal"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-cpu-frequency",
+                        "name":  "FrÃ©quences CPU",
+                        "description":  "Analyse les frÃ©quences actuelles, minimales et maximales des cÅ“urs CPU. Surveille les changements dynamiques de frÃ©quence.",
+                        "category":  "performance",
+                        "subcategory":  "cpu",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/cpu/get-cpu.frequency.sh",
+                        "inputs":  [
+                                       "intervalle_mesure",
+                                       "nombre_echantillons"
+                                   ],
+                        "outputs":  [
+                                        "frequences_courantes",
+                                        "limites_frequences",
+                                        "historique_changements"
+                                    ],
+                        "conditions":  [
+                                           "cpufreq_disponible",
+                                           "acces_scaling"
+                                       ],
+                        "dependencies":  [
+                                             "cpufreq-info",
+                                             "scaling governors"
+                                         ],
+                        "tags":  [
+                                     "cpu",
+                                     "frequency",
+                                     "monitoring",
+                                     "performance"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "set-cpu-governor",
+                        "name":  "Configuration Governor CPU",
+                        "description":  "Configure le governor de frÃ©quence CPU (performance, powersave, ondemand, conservative). ContrÃ´le les stratÃ©gies d\u0027Ã©conomie d\u0027Ã©nergie.",
+                        "category":  "performance",
+                        "subcategory":  "cpu",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/cpu/set-cpu.governor.sh",
+                        "inputs":  [
+                                       "governor_cible",
+                                       "coeurs_specifiques"
+                                   ],
+                        "outputs":  [
+                                        "governor_applique",
+                                        "confirmation_changement"
+                                    ],
+                        "conditions":  [
+                                           "permissions_root",
+                                           "governors_disponibles"
+                                       ],
+                        "dependencies":  [
+                                             "cpufreq subsystem",
+                                             "root privileges"
+                                         ],
+                        "tags":  [
+                                     "cpu",
+                                     "governor",
+                                     "configuration",
+                                     "power-management"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json"
+                                           ]
+                    },
+                    {
+                        "id":  "get-cpu-top-processes",
+                        "name":  "Processus CPU Intensifs",
+                        "description":  "Identifie les processus consommant le plus de CPU. Analyse l\u0027utilisation par cÅ“ur et fournit des statistiques dÃ©taillÃ©es.",
+                        "category":  "performance",
+                        "subcategory":  "cpu",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/cpu/get-cpu.top.processes.sh",
+                        "inputs":  [
+                                       "nombre_processus",
+                                       "critere_tri",
+                                       "inclure_threads"
+                                   ],
+                        "outputs":  [
+                                        "top_processus",
+                                        "usage_par_coeur",
+                                        "statistiques_cpu"
+                                    ],
+                        "conditions":  [
+                                           "ps_disponible",
+                                           "proc_filesystem"
+                                       ],
+                        "dependencies":  [
+                                             "ps",
+                                             "proc filesystem"
+                                         ],
+                        "tags":  [
+                                     "cpu",
+                                     "processes",
+                                     "monitoring",
+                                     "top"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-memory-info",
+                        "name":  "Informations MÃ©moire",
+                        "description":  "Collecte des informations complÃ¨tes sur la mÃ©moire systÃ¨me : RAM totale, utilisÃ©e, disponible, buffers, cache, swap et mÃ©moire virtuelle.",
+                        "category":  "performance",
+                        "subcategory":  "memory",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/memory/get-memory.info.sh",
+                        "inputs":  [
+                                       "niveau_detail",
+                                       "inclure_hardware"
+                                   ],
+                        "outputs":  [
+                                        "info_memoire",
+                                        "details_hardware",
+                                        "statistiques_usage"
+                                    ],
+                        "conditions":  [
+                                           "acces_proc_meminfo",
+                                           "dmidecode_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "proc filesystem",
+                                             "dmidecode",
+                                             "free"
+                                         ],
+                        "tags":  [
+                                     "memory",
+                                     "info",
+                                     "monitoring",
+                                     "hardware"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-memory-available",
+                        "name":  "MÃ©moire Disponible",
+                        "description":  "Surveille la mÃ©moire disponible en temps rÃ©el. Calcule la mÃ©moire rÃ©ellement utilisable et dÃ©tecte les situations de stress mÃ©moire.",
+                        "category":  "performance",
+                        "subcategory":  "memory",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/memory/get-memory.available.sh",
+                        "inputs":  [
+                                       "seuils_alerte",
+                                       "intervalle_monitoring"
+                                   ],
+                        "outputs":  [
+                                        "memoire_disponible",
+                                        "alertes_memoire",
+                                        "tendances_usage"
+                                    ],
+                        "conditions":  [
+                                           "acces_proc_meminfo"
+                                       ],
+                        "dependencies":  [
+                                             "proc filesystem"
+                                         ],
+                        "tags":  [
+                                     "memory",
+                                     "available",
+                                     "monitoring",
+                                     "alerts"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-memory-top-processes",
+                        "name":  "Processus MÃ©moire Intensifs",
+                        "description":  "Identifie les processus consommant le plus de mÃ©moire (RSS, VSZ, PSS). Analyse les fuites mÃ©moire et l\u0027utilisation de swap par processus.",
+                        "category":  "performance",
+                        "subcategory":  "memory",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/memory/get-memory.top.processes.sh",
+                        "inputs":  [
+                                       "nombre_processus",
+                                       "type_memoire",
+                                       "inclure_swap"
+                                   ],
+                        "outputs":  [
+                                        "top_processus_memoire",
+                                        "details_usage",
+                                        "analyse_fuites"
+                                    ],
+                        "conditions":  [
+                                           "ps_disponible",
+                                           "proc_filesystem"
+                                       ],
+                        "dependencies":  [
+                                             "ps",
+                                             "proc filesystem",
+                                             "smaps"
+                                         ],
+                        "tags":  [
+                                     "memory",
+                                     "processes",
+                                     "monitoring",
+                                     "leaks"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "clear-memory-cache",
+                        "name":  "Nettoyage Cache MÃ©moire",
+                        "description":  "Nettoie les caches systÃ¨me (page cache, dentries, inodes). LibÃ¨re la mÃ©moire utilisÃ©e par les buffers pour les tests de performance.",
+                        "category":  "performance",
+                        "subcategory":  "memory",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/memory/clear-memory.cache.sh",
+                        "inputs":  [
+                                       "type_cache",
+                                       "mode_securise"
+                                   ],
+                        "outputs":  [
+                                        "memoire_liberee",
+                                        "rapport_nettoyage"
+                                    ],
+                        "conditions":  [
+                                           "permissions_root",
+                                           "acces_drop_caches"
+                                       ],
+                        "dependencies":  [
+                                             "root privileges",
+                                             "proc/sys/vm/drop_caches"
+                                         ],
+                        "tags":  [
+                                     "memory",
+                                     "cache",
+                                     "cleanup",
+                                     "performance"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json"
+                                           ]
+                    },
+                    {
+                        "id":  "check-memory-oom",
+                        "name":  "DÃ©tection OOM Events",
+                        "description":  "Analyse les Ã©vÃ©nements Out-Of-Memory dans les logs systÃ¨me. Identifie les processus tuÃ©s par l\u0027OOM killer et les causes.",
+                        "category":  "performance",
+                        "subcategory":  "memory",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/memory/check-memory.oom.sh",
+                        "inputs":  [
+                                       "periode_analyse",
+                                       "niveau_detail"
+                                   ],
+                        "outputs":  [
+                                        "evenements_oom",
+                                        "processus_tues",
+                                        "analyse_causes"
+                                    ],
+                        "conditions":  [
+                                           "acces_journalctl",
+                                           "logs_disponibles"
+                                       ],
+                        "dependencies":  [
+                                             "journalctl",
+                                             "system logs"
+                                         ],
+                        "tags":  [
+                                     "memory",
+                                     "oom",
+                                     "monitoring",
+                                     "debugging"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-swap-usage",
+                        "name":  "Utilisation Swap",
+                        "description":  "Surveille l\u0027utilisation du swap systÃ¨me. Analyse les performances et identifie les processus utilisant le swap de maniÃ¨re intensive.",
+                        "category":  "performance",
+                        "subcategory":  "swap",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/swap/get-swap.usage.sh",
+                        "inputs":  [
+                                       "detail_periph",
+                                       "format_sortie"
+                                   ],
+                        "outputs":  [
+                                        "usage_swap",
+                                        "details_peripheriques",
+                                        "statistiques_performance"
+                                    ],
+                        "conditions":  [
+                                           "swap_active",
+                                           "acces_proc_swaps"
+                                       ],
+                        "dependencies":  [
+                                             "proc filesystem",
+                                             "swap devices"
+                                         ],
+                        "tags":  [
+                                     "swap",
+                                     "usage",
+                                     "monitoring",
+                                     "performance"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "create-swap-file",
+                        "name":  "CrÃ©ation Fichier Swap",
+                        "description":  "CrÃ©e et configure un nouveau fichier de swap avec la taille spÃ©cifiÃ©e. GÃ¨re les permissions et l\u0027activation automatique.",
+                        "category":  "performance",
+                        "subcategory":  "swap",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/swap/create-swap.file.sh",
+                        "inputs":  [
+                                       "taille_swap",
+                                       "emplacement_fichier"
+                                   ],
+                        "outputs":  [
+                                        "fichier_swap_cree",
+                                        "rapport_creation"
+                                    ],
+                        "conditions":  [
+                                           "permissions_root",
+                                           "espace_disque_suffisant"
+                                       ],
+                        "dependencies":  [
+                                             "dd",
+                                             "mkswap",
+                                             "swapon",
+                                             "root privileges"
+                                         ],
+                        "tags":  [
+                                     "swap",
+                                     "creation",
+                                     "configuration",
+                                     "filesystem"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json"
+                                           ]
+                    },
+                    {
+                        "id":  "enable-swap",
+                        "name":  "Activation Swap",
+                        "description":  "Active un fichier ou partition swap avec prioritÃ© configurable. VÃ©rifie la validitÃ© avant activation.",
+                        "category":  "performance",
+                        "subcategory":  "swap",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/swap/enable-swap.sh",
+                        "inputs":  [
+                                       "source_swap",
+                                       "priorite"
+                                   ],
+                        "outputs":  [
+                                        "swap_active",
+                                        "confirmation_activation"
+                                    ],
+                        "conditions":  [
+                                           "permissions_root",
+                                           "swap_valide"
+                                       ],
+                        "dependencies":  [
+                                             "swapon",
+                                             "root privileges"
+                                         ],
+                        "tags":  [
+                                     "swap",
+                                     "enable",
+                                     "configuration",
+                                     "priority"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json"
+                                           ]
+                    },
+                    {
+                        "id":  "disable-swap",
+                        "name":  "DÃ©sactivation Swap",
+                        "description":  "DÃ©sactive un ou tous les fichiers/partitions swap. Option de suppression automatique des fichiers swap.",
+                        "category":  "performance",
+                        "subcategory":  "swap",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/swap/disable-swap.sh",
+                        "inputs":  [
+                                       "source_swap",
+                                       "supprimer_fichier"
+                                   ],
+                        "outputs":  [
+                                        "swap_desactive",
+                                        "rapport_desactivation"
+                                    ],
+                        "conditions":  [
+                                           "permissions_root",
+                                           "swap_actif"
+                                       ],
+                        "dependencies":  [
+                                             "swapoff",
+                                             "root privileges"
+                                         ],
+                        "tags":  [
+                                     "swap",
+                                     "disable",
+                                     "cleanup",
+                                     "management"
+                                 ],
+                        "complexity":  "low",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json"
+                                           ]
+                    },
+                    {
+                        "id":  "get-io-stats",
+                        "name":  "Statistiques I/O",
+                        "description":  "Collecte les statistiques d\u0027entrÃ©es/sorties des pÃ©riphÃ©riques de stockage. Analyse les performances et la latence des disques.",
+                        "category":  "performance",
+                        "subcategory":  "io",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/io/get-io.stats.sh",
+                        "inputs":  [
+                                       "peripherique",
+                                       "intervalle_mesure"
+                                   ],
+                        "outputs":  [
+                                        "statistiques_io",
+                                        "metriques_performance",
+                                        "analyse_latence"
+                                    ],
+                        "conditions":  [
+                                           "acces_proc_diskstats",
+                                           "iostat_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "iostat",
+                                             "proc filesystem"
+                                         ],
+                        "tags":  [
+                                     "io",
+                                     "statistics",
+                                     "monitoring",
+                                     "performance"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-io-top-processes",
+                        "name":  "Processus I/O Intensifs",
+                        "description":  "Identifie les processus avec la plus forte utilisation d\u0027I/O. Analyse les lectures, Ã©critures et temps d\u0027attente I/O.",
+                        "category":  "performance",
+                        "subcategory":  "io",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/io/get-io.top.processes.sh",
+                        "inputs":  [
+                                       "nombre_processus",
+                                       "critere_tri",
+                                       "inclure_threads"
+                                   ],
+                        "outputs":  [
+                                        "top_processus_io",
+                                        "statistiques_io",
+                                        "analyse_goulots"
+                                    ],
+                        "conditions":  [
+                                           "acces_proc_io",
+                                           "iotop_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "proc filesystem",
+                                             "iotop"
+                                         ],
+                        "tags":  [
+                                     "io",
+                                     "processes",
+                                     "monitoring",
+                                     "bottlenecks"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "check-disk-latency",
+                        "name":  "Test Latence Disque",
+                        "description":  "Mesure la latence d\u0027accÃ¨s aux disques par tests d\u0027Ã©criture/lecture. DÃ©tecte les problÃ¨mes de performance de stockage.",
+                        "category":  "performance",
+                        "subcategory":  "io",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/io/check-disk.latency.sh",
+                        "inputs":  [
+                                       "peripheriques_test",
+                                       "taille_test",
+                                       "seuils_alerte"
+                                   ],
+                        "outputs":  [
+                                        "latences_mesurees",
+                                        "alertes_performance",
+                                        "rapport_test"
+                                    ],
+                        "conditions":  [
+                                           "permissions_ecriture",
+                                           "espace_test_disponible"
+                                       ],
+                        "dependencies":  [
+                                             "dd",
+                                             "bc",
+                                             "write permissions"
+                                         ],
+                        "tags":  [
+                                     "io",
+                                     "latency",
+                                     "testing",
+                                     "performance"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "benchmark-disk-speed",
+                        "name":  "Benchmark Vitesse Disque",
+                        "description":  "Effectue des tests de dÃ©bit de lecture/Ã©criture sur les disques. Mesure les performances avec diffÃ©rentes tailles de blocs.",
+                        "category":  "performance",
+                        "subcategory":  "io",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/io/benchmark-disk.speed.sh",
+                        "inputs":  [
+                                       "chemin_test",
+                                       "taille_fichier",
+                                       "taille_blocs"
+                                   ],
+                        "outputs":  [
+                                        "vitesses_mesurees",
+                                        "rapport_benchmark",
+                                        "comparaisons_performance"
+                                    ],
+                        "conditions":  [
+                                           "espace_disque_suffisant",
+                                           "permissions_ecriture"
+                                       ],
+                        "dependencies":  [
+                                             "dd",
+                                             "bc",
+                                             "write permissions"
+                                         ],
+                        "tags":  [
+                                     "io",
+                                     "benchmark",
+                                     "speed",
+                                     "testing"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "get-network-bandwidth",
+                        "name":  "Bande Passante RÃ©seau",
+                        "description":  "Mesure la bande passante rÃ©seau en temps rÃ©el par interface. Surveille le trafic entrant et sortant avec statistiques dÃ©taillÃ©es.",
+                        "category":  "performance",
+                        "subcategory":  "network",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/network/get-network.bandwidth.sh",
+                        "inputs":  [
+                                       "interface_reseau",
+                                       "intervalle_mesure",
+                                       "duree_monitoring"
+                                   ],
+                        "outputs":  [
+                                        "bande_passante_mesuree",
+                                        "statistiques_trafic",
+                                        "tendances_usage"
+                                    ],
+                        "conditions":  [
+                                           "interface_active",
+                                           "acces_proc_net"
+                                       ],
+                        "dependencies":  [
+                                             "proc filesystem",
+                                             "network interfaces"
+                                         ],
+                        "tags":  [
+                                     "network",
+                                     "bandwidth",
+                                     "monitoring",
+                                     "traffic"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "test-network-speed",
+                        "name":  "Test Vitesse RÃ©seau",
+                        "description":  "Teste la vitesse de connexion rÃ©seau vers des serveurs externes. Mesure la latence, le dÃ©bit et la qualitÃ© de connexion.",
+                        "category":  "performance",
+                        "subcategory":  "network",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/network/test-network.speed.sh",
+                        "inputs":  [
+                                       "serveur_cible",
+                                       "taille_test",
+                                       "nombre_tests"
+                                   ],
+                        "outputs":  [
+                                        "vitesses_mesurees",
+                                        "latences",
+                                        "qualite_connexion"
+                                    ],
+                        "conditions":  [
+                                           "connexion_internet",
+                                           "serveurs_test_disponibles"
+                                       ],
+                        "dependencies":  [
+                                             "curl",
+                                             "speedtest-cli",
+                                             "bc"
+                                         ],
+                        "tags":  [
+                                     "network",
+                                     "speed",
+                                     "testing",
+                                     "connectivity"
+                                 ],
+                        "complexity":  "medium",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    },
+                    {
+                        "id":  "benchmark-network-iperf",
+                        "name":  "Benchmark RÃ©seau iPerf",
+                        "description":  "Effectue des tests de performance rÃ©seau avancÃ©s avec iperf3. Mesure le dÃ©bit, la latence et les pertes de paquets.",
+                        "category":  "performance",
+                        "subcategory":  "network",
+                        "level":  "atomic",
+                        "path":  "atomics/performance/network/benchmark-network.iperf.sh",
+                        "inputs":  [
+                                       "serveur_iperf",
+                                       "protocole",
+                                       "duree_test",
+                                       "streams_paralleles"
+                                   ],
+                        "outputs":  [
+                                        "resultats_iperf",
+                                        "metriques_avancees",
+                                        "analyse_performance"
+                                    ],
+                        "conditions":  [
+                                           "iperf3_disponible",
+                                           "serveur_iperf_accessible"
+                                       ],
+                        "dependencies":  [
+                                             "iperf3",
+                                             "jq",
+                                             "network connectivity"
+                                         ],
+                        "tags":  [
+                                     "network",
+                                     "iperf",
+                                     "benchmark",
+                                     "advanced"
+                                 ],
+                        "complexity":  "high",
+                        "status":  "stable",
+                        "lastModified":  "2025-10-04T16:00:00Z",
+                        "author":  "AtomicOps Team",
+                        "version":  "1.0.0",
+                        "output_formats":  [
+                                               "text",
+                                               "json",
+                                               "csv"
+                                           ]
+                    }
+                ],
+    "statistics":  {
+                       "by_category":  {
+                                           "usb":  4,
+                                           "iscsi":  3,
+                                           "system":  8,
+                                           "network":  1,
+                                           "file":  0
+                                       },
+                       "by_level":  {
+                                        "atomic":  12,
+                                        "orchestrator":  3,
+                                        "main":  7
+                                    },
+                       "by_complexity":  {
+                                             "low":  6,
+                                             "medium":  8,
+                                             "high":  8
+                                         },
+                       "by_status":  {
+                                         "stable":  19,
+                                         "testing":  1,
+                                         "draft":  2
+                                     },
+                       "total_dependencies":  31,
+                       "avg_dependencies_per_script":  1.4
+                   }
 }
