@@ -453,6 +453,12 @@ const sshScripts: Script[] = [
         outputs: ['private_key_path', 'public_key_path', 'fingerprint']
       }
     ],
+    inputSockets: [
+      { name: '--type', type: 'username', required: false, description: 'Type de clé [rsa|ed25519]', defaultValue: 'ed25519' },
+      { name: '--bits', type: 'size', required: false, description: 'Taille de la clé', defaultValue: '4096' },
+      { name: '--comment', type: 'username', required: false, description: 'Commentaire pour la clé' },
+      { name: '--output', type: 'path', required: false, description: 'Chemin de sortie (optionnel)' }
+    ],
     dependencies: []
   },
   {
@@ -473,6 +479,11 @@ const sshScripts: Script[] = [
         inputs: ['public_key', 'target_user', 'host'],
         outputs: ['key_added', 'authorized_keys_path']
       }
+    ],
+    inputSockets: [
+      { name: '--user', type: 'username', required: true, description: 'Nom d\'utilisateur' },
+      { name: '--key', type: 'token', required: true, description: 'Contenu de la clé publique' },
+      { name: '--host', type: 'hostname', required: false, description: 'Nom d\'hôte (optionnel)' }
     ],
     dependencies: []
   },
@@ -536,6 +547,12 @@ const sshScripts: Script[] = [
         inputs: ['host', 'user', 'port', 'identity_file', 'timeout'],
         outputs: ['connection_status', 'auth_method', 'response_time']
       }
+    ],
+    inputSockets: [
+      { name: '--host', type: 'ip', required: true, description: 'Adresse IP de l\'hôte' },
+      { name: '--port', type: 'port', required: false, description: 'Port SSH (défaut: 22)', defaultValue: '22' },
+      { name: '--user', type: 'username', required: true, description: 'Nom d\'utilisateur' },
+      { name: '--timeout', type: 'timeout', required: false, description: 'Timeout en secondes (défaut: 10)', defaultValue: '10' }
     ],
     dependencies: []
   },
@@ -684,6 +701,14 @@ const sshScripts: Script[] = [
         outputs: ['workflow_status', 'step_results', 'execution_log']
       }
     ],
+    inputSockets: [
+      { name: '--host', type: 'hostname', required: true, description: 'IP/hostname de l\'hôte distant' },
+      { name: '--user', type: 'username', required: true, description: 'Nom d\'utilisateur SSH' },
+      { name: '--disk', type: 'device', required: true, description: 'Périphérique disque' },
+      { name: '--target-iqn', type: 'iqn', required: true, description: 'IQN iSCSI cible' },
+      { name: '--ssh-key', type: 'path', required: false, description: 'Chemin vers la clé SSH (optionnel)' },
+      { name: '--log-server', type: 'url', required: false, description: 'URL du serveur de logs (optionnel)' }
+    ],
     dependencies: ['ssh_011', 'ssh_006', 'ssh_005'] // deploy-script + execute + check-connection
   },
 
@@ -706,6 +731,12 @@ const sshScripts: Script[] = [
         inputs: ['target_user', 'target_host', 'key_type', 'test_connection'],
         outputs: ['access_configured', 'key_deployed', 'connection_validated']
       }
+    ],
+    inputSockets: [
+      { name: '--host', type: 'ip', required: true, description: 'Adresse IP de l\'hôte' },
+      { name: '--user', type: 'username', required: true, description: 'Nom d\'utilisateur' },
+      { name: '--key-type', type: 'username', required: false, description: 'Type de clé [rsa|ed25519] (défaut: ed25519)', defaultValue: 'ed25519' },
+      { name: '--key-size', type: 'size', required: false, description: 'Taille de clé en bits (défaut: 4096)', defaultValue: '4096' }
     ],
     dependencies: ['ssh_001', 'ssh_002', 'ssh_005'] // generate-keypair + add-key + check-connection
   },

@@ -29,6 +29,15 @@ export interface Script {
   version?: string;
   functions?: ScriptFunction[];
   lineCount?: number;
+  inputSockets?: ScriptInputSocket[];
+}
+
+export interface ScriptInputSocket {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  defaultValue?: string;
 }
 
 export interface ScriptFunction {

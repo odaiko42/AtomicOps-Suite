@@ -16,6 +16,47 @@ export enum ScriptDataType {
   ANY = 'any'
 }
 
+// Types pour les paramètres d'entrée
+export enum InputParameterType {
+  IP = 'ip',
+  HOSTNAME = 'hostname',
+  URL = 'url',
+  EMAIL = 'email',
+  IQN = 'iqn',
+  DEVICE = 'device',
+  PATH = 'path',
+  PORT = 'port',
+  USERNAME = 'username',
+  PASSWORD = 'password',
+  TOKEN = 'token',
+  SIZE = 'size',
+  TIMEOUT = 'timeout'
+}
+
+export interface InputParameterBox {
+  id: string;
+  type: InputParameterType;
+  name: string;
+  value: string;
+  position: Point2D;
+  required: boolean;
+  defaultValue?: string;
+  connections: string[]; // IDs des scripts connectés
+  validation?: {
+    pattern?: RegExp;
+    message?: string;
+    isValid?: boolean;
+  };
+}
+
+export interface ScriptInputSocket {
+  name: string;
+  type: InputParameterType;
+  required: boolean;
+  description?: string;
+  defaultValue?: string;
+}
+
 export interface Point2D {
   x: number;
   y: number;
@@ -50,6 +91,7 @@ export interface ScriptDefinition {
   inputs: ScriptSocketDefinition[];
   outputs: ScriptSocketDefinition[];
   parameters: ScriptParameterDefinition[];
+  inputSockets?: ScriptInputSocket[]; // Points d'attache pour paramètres
   color?: string;
   icon?: string;
 }

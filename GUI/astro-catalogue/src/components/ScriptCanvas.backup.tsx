@@ -8,10 +8,12 @@ import {
   SCRIPT_CATEGORY_COLORS,
   ScriptDefinition
 } from '@/types/script-flow';
+import { ParameterType, PARAMETER_COLORS } from '@/types/parameter-types';
+import { getScriptParameters, createAttachmentPoints } from '@/data/script-parameters';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Square, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Play, Square, AlertCircle, CheckCircle, Clock, Settings } from "lucide-react";
 
 interface ScriptCanvasProps {
   scripts: ScriptInstance[];
@@ -48,7 +50,7 @@ interface ConnectionState {
 interface HoverState {
   scriptId?: string;
   socketName?: string;
-  socketType?: 'input' | 'output' | 'input_param';
+  socketType?: 'input' | 'output';
 }
 
 interface PanState {
@@ -187,98 +189,6 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
     );
   };
 
-  // Rendu des input sockets (points d'attache pour paramètres)
-  const renderInputSocket = (
-    script: ScriptInstance,
-    definition: any,
-    inputSocket: any,
-    index: number
-  ) => {
-    const isHovered = hoverState.scriptId === script.id && 
-                     hoverState.socketName === inputSocket.name && 
-                     hoverState.socketType === 'input_param';
-    
-    const x = -SOCKET_RADIUS - 5; // Un peu plus à gauche que les sockets normaux
-    const y = 75 + (index * 20); // Espacement plus serré pour les paramètres
-    
-    // Couleurs pour les différents types de paramètres
-    const getInputSocketColor = (type: string) => {
-      const colors: Record<string, string> = {
-        'ip': '#3b82f6',
-        'hostname': '#06b6d4',
-        'url': '#8b5cf6',
-        'email': '#ec4899',
-        'iqn': '#f59e0b',
-        'device': '#ef4444',
-        'path': '#10b981',
-        'port': '#6366f1',
-        'username': '#84cc16',
-        'password': '#f97316',
-        'token': '#a855f7',
-        'size': '#d946ef',
-        'timeout': '#14b8a6'
-      };
-      return colors[type] || '#6b7280';
-    };
-    
-    return (
-      <g key={`input-param-${inputSocket.name}`}>
-        {/* Point d'attache principal */}
-        <circle
-          cx={x}
-          cy={y}
-          r={6}
-          fill={getInputSocketColor(inputSocket.type)}
-          stroke={isHovered ? '#ffffff' : '#000000'}
-          strokeWidth={isHovered ? 2 : 1}
-          className="cursor-pointer"
-          onMouseEnter={() => setHoverState({
-            scriptId: script.id,
-            socketName: inputSocket.name,
-            socketType: 'input_param'
-          })}
-          onMouseLeave={() => setHoverState({})}
-        >
-          <title>{`${inputSocket.description || inputSocket.name} (${inputSocket.type})`}</title>
-        </circle>
-        
-        {/* Indicateur de type requis */}
-        {inputSocket.required && (
-          <circle
-            cx={x - 8}
-            cy={y - 8}
-            r="2"
-            fill="#ef4444"
-          />
-        )}
-        
-        {/* Ligne de connexion vers le script */}
-        <line
-          x1={x + 6}
-          y1={y}
-          x2={0}
-          y2={y}
-          stroke={getInputSocketColor(inputSocket.type)}
-          strokeWidth="2"
-          strokeDasharray="2,2"
-          opacity="0.6"
-        />
-        
-        {/* Label du paramètre */}
-        <text
-          x={x - 10}
-          y={y + 3}
-          fontSize="10"
-          fill="currentColor"
-          textAnchor="end"
-          className="select-none pointer-events-none"
-        >
-          {inputSocket.name}
-        </text>
-      </g>
-    );
-  };
-
   // Gestionnaire de clic sur socket
   const handleSocketMouseDown = (
     e: React.MouseEvent,
@@ -359,6 +269,84 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
   };
 
   // Rendu d'un script
+    };
+
+  // Rendu des points d'attache pour les paramètres
+  const renderParameterAttachments = (script: ScriptInstance, definition: ScriptDefinition) => {
+    const parameters = getScriptParameters(definition.id);
+    if (parameters.length === 0) return null;
+
+    const attachmentPoints = createAttachmentPoints(definition.id);
+    
+    return (
+      <g>
+        {/* Ligne verticale pour les points d'attache */}
+        <line
+          x1={-2}
+          y1={50}
+          x2={-2}
+          y2={50 + (parameters.length * 25)}
+          stroke="hsl(var(--border))"
+          strokeWidth="2"
+          strokeDasharray="3,3"
+        />
+        
+        {attachmentPoints.map((point, index) => {
+          const param = point.parameter;
+          const color = PARAMETER_COLORS[param.type];
+          
+          return (
+            <g key={param.id}>
+              {/* Point d'attache */}
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="6"
+                fill={color}
+                stroke="white"
+                strokeWidth="2"
+                className="cursor-crosshair hover:scale-125 transition-transform"
+                title={`${param.name} (${param.type}${param.required ? ' - requis' : ''})`}
+              />
+              
+              {/* Indicateur de paramètre requis */}
+              {param.required && (
+                <circle
+                  cx={point.x + 12}
+                  cy={point.y - 12}
+                  r="3"
+                  fill="#ef4444"
+                  title="Paramètre obligatoire"
+                />
+              )}
+              
+              {/* Label du paramètre */}
+              <text
+                x={point.x + 16}
+                y={point.y + 4}
+                fontSize="10"
+                fill="hsl(var(--foreground))"
+                className="select-none"
+              >
+                {param.name}
+              </text>
+              
+              {/* Icône de type */}
+              <foreignObject
+                x={point.x - 20}
+                y={point.y - 8}
+                width="16"
+                height="16"
+              >
+                <Settings className="w-4 h-4" style={{ color }} />
+              </foreignObject>
+            </g>
+          );
+        })}
+      </g>
+    );
+  };
+
   const renderScript = (script: ScriptInstance) => {
     const definition = getScriptDefinition(script.id);
     if (!definition) return null;
@@ -455,6 +443,9 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
           </text>
         )}
 
+        {/* Points d'attache pour paramètres */}
+        {renderParameterAttachments(script, definition)}
+
         {/* Sockets d'entrée */}
         {definition.inputs.map((input, index) => 
           renderSocket(script, definition, input, index, 'input')
@@ -463,11 +454,6 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
         {/* Sockets de sortie */}
         {definition.outputs.map((output, index) => 
           renderSocket(script, definition, output, index, 'output')
-        )}
-
-        {/* Points d'attache pour paramètres d'entrée */}
-        {definition.inputSockets && definition.inputSockets.map((inputSocket: any, index: number) => 
-          renderInputSocket(script, definition, inputSocket, index)
         )}
 
         {/* Bouton d'exécution */}
