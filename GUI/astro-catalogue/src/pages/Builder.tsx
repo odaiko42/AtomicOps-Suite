@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScriptCanvas } from "@/components/ScriptCanvas";
 import { ScriptLibrary } from "@/components/ScriptLibrary";
+import { InputParameterBoxComponent } from "@/components/InputParameterBox";
 import { useScriptWorkflow } from "@/hooks/useScriptWorkflow";
-import { ScriptDefinition, Point2D } from "@/types/script-flow";
+import { ScriptDefinition, Point2D, InputParameterBox } from "@/types/script-flow";
+import { mockParameterBoxes } from "@/data/mockData";
 import { 
   Play, 
   Save, 
@@ -67,6 +69,26 @@ export default function Builder() {
   } = useScriptWorkflow();
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [parameterBoxes, setParameterBoxes] = useState<InputParameterBox[]>(mockParameterBoxes);
+  const [connectionMode, setConnectionMode] = useState<string | null>(null);
+
+  // Gestionnaires pour les boîtes d'input paramètres
+  const handleParameterValueChange = (boxId: string, value: string) => {
+    setParameterBoxes(prev => prev.map(box => 
+      box.id === boxId ? { ...box, value } : box
+    ));
+  };
+
+  const handleParameterMove = (boxId: string, position: Point2D) => {
+    setParameterBoxes(prev => prev.map(box => 
+      box.id === boxId ? { ...box, position } : box
+    ));
+  };
+
+  const handleParameterConnectionStart = (boxId: string) => {
+    setConnectionMode(boxId);
+    toast.info('Mode connexion activé - cliquez sur un point d\'attache de script');
+  };
 
   // Gestionnaire de glisser-déposer depuis la bibliothèque
   const handleScriptDragStart = (script: ScriptDefinition, e: React.DragEvent) => {
@@ -279,7 +301,55 @@ export default function Builder() {
       </Card>
 
       {/* Interface principale */}
-      <div className="flex gap-6 h-[calc(100vh-300px)]">
+      <div className="flex gap-4 h-[calc(100vh-300px)]">
+        {/* Panneau vertical des paramètres d'input - À GAUCHE */}
+        <Card className="w-72 flex-shrink-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Paramètres d'Entrée
+            </CardTitle>
+            <CardDescription>
+              Connectez ces inputs aux scripts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 h-full overflow-y-auto max-h-[calc(100vh-400px)]">
+            <div className="space-y-3">
+              {parameterBoxes.map(paramBox => (
+                <div key={paramBox.id} className="w-full">
+                  <InputParameterBoxComponent
+                    parameterBox={paramBox}
+                    onValueChange={handleParameterValueChange}
+                    onMove={handleParameterMove}
+                    onConnectionStart={handleParameterConnectionStart}
+                    zoom={1}
+                  />
+                </div>
+              ))}
+            </div>
+            
+            {connectionMode && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Mode Connexion</span>
+                </div>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Cliquez sur un point d'attache de script pour connecter le paramètre
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-2 h-7" 
+                  onClick={() => setConnectionMode(null)}
+                >
+                  Annuler
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Bibliothèque de scripts */}
         <ScriptLibrary
           scriptDefinitions={scriptDefinitions}
@@ -320,6 +390,19 @@ export default function Builder() {
                 camera={camera}
                 onCameraChange={setCamera}
                 onZoomChange={updateZoom}
+                connectionMode={connectionMode}
+                onParameterConnect={(scriptId: string, socketName: string) => {
+                  if (connectionMode) {
+                    // Logique pour connecter le parameter box au script
+                    setParameterBoxes(prev => prev.map(box => 
+                      box.id === connectionMode 
+                        ? { ...box, connections: [...box.connections, `${scriptId}:${socketName}`] }
+                        : box
+                    ));
+                    toast.success('Paramètre connecté au script');
+                    setConnectionMode(null);
+                  }
+                }}
               />
               
               {/* Message d'aide si vide */}

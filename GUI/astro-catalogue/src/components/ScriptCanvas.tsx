@@ -27,6 +27,8 @@ interface ScriptCanvasProps {
   camera: { x: number; y: number };
   onCameraChange: (camera: { x: number; y: number }) => void;
   onZoomChange: (zoom: number) => void;
+  connectionMode?: string | null;
+  onParameterConnect?: (scriptId: string, socketName: string) => void;
 }
 
 interface DragState {
@@ -91,7 +93,9 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
   zoom,
   camera,
   onCameraChange,
-  onZoomChange
+  onZoomChange,
+  connectionMode,
+  onParameterConnect
 }) => {
   const canvasRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -231,13 +235,18 @@ export const ScriptCanvas: React.FC<ScriptCanvasProps> = ({
           fill={getInputSocketColor(inputSocket.type)}
           stroke={isHovered ? '#ffffff' : '#000000'}
           strokeWidth={isHovered ? 2 : 1}
-          className="cursor-pointer"
+          className={connectionMode ? "cursor-crosshair" : "cursor-pointer"}
           onMouseEnter={() => setHoverState({
             scriptId: script.id,
             socketName: inputSocket.name,
             socketType: 'input_param'
           })}
           onMouseLeave={() => setHoverState({})}
+          onClick={() => {
+            if (connectionMode && onParameterConnect) {
+              onParameterConnect(script.id, inputSocket.name);
+            }
+          }}
         >
           <title>{`${inputSocket.description || inputSocket.name} (${inputSocket.type})`}</title>
         </circle>

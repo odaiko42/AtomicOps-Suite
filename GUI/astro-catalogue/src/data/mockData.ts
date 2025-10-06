@@ -965,3 +965,142 @@ export const generateMockHierarchy = () => {
 
   return hierarchy;
 };
+
+// ===========================
+// BOÎTES D'INPUT PAR DÉFAUT
+// ===========================
+
+import { InputParameterBox, InputParameterType } from '@/types/script-flow';
+
+export const mockParameterBoxes: InputParameterBox[] = [
+  {
+    id: 'input_ip_001',
+    type: InputParameterType.IP,
+    name: 'IP Host',
+    value: '192.168.88.210',
+    position: { x: 100, y: 100 },
+    required: true,
+    defaultValue: '192.168.88.210',
+    connections: []
+  },
+  {
+    id: 'input_hostname_001', 
+    type: InputParameterType.HOSTNAME,
+    name: 'FQDN',
+    value: 'proxmox.local',
+    position: { x: 100, y: 200 },
+    required: false,
+    defaultValue: 'proxmox.local',
+    connections: []
+  },
+  {
+    id: 'input_username_001',
+    type: InputParameterType.USERNAME,
+    name: 'Login',
+    value: 'root',
+    position: { x: 100, y: 300 },
+    required: true,
+    defaultValue: 'root',
+    connections: []
+  },
+  {
+    id: 'input_password_001',
+    type: InputParameterType.PASSWORD,
+    name: 'Password',
+    value: 'changeme123',
+    position: { x: 100, y: 400 },
+    required: true,
+    defaultValue: '',
+    connections: []
+  },
+  {
+    id: 'input_iqn_001',
+    type: InputParameterType.IQN,
+    name: 'IQN Target',
+    value: 'iqn.2025-01.com.example:target1',
+    position: { x: 400, y: 100 },
+    required: false,
+    defaultValue: 'iqn.2025-01.com.example:target1',
+    connections: []
+  },
+  {
+    id: 'input_device_001',
+    type: InputParameterType.DEVICE,
+    name: 'Device Path',
+    value: '/dev/sdb1',
+    position: { x: 400, y: 200 },
+    required: false,
+    defaultValue: '/dev/sdb1',
+    connections: []
+  },
+  {
+    id: 'input_port_001',
+    type: InputParameterType.PORT,
+    name: 'SSH Port',
+    value: '22',
+    position: { x: 400, y: 300 },
+    required: false,
+    defaultValue: '22',
+    connections: []
+  },
+  {
+    id: 'input_path_001',
+    type: InputParameterType.PATH,
+    name: 'File Path',
+    value: '/home/user/script.sh',
+    position: { x: 400, y: 400 },
+    required: false,
+    defaultValue: '/tmp',
+    connections: []
+  },
+  {
+    id: 'input_url_001',
+    type: InputParameterType.URL,
+    name: 'Log Server URL',
+    value: 'https://logs.example.com/api',
+    position: { x: 700, y: 100 },
+    required: false,
+    defaultValue: 'https://logs.example.com/api',
+    connections: []
+  },
+  {
+    id: 'input_email_001',
+    type: InputParameterType.EMAIL,
+    name: 'Admin Email',
+    value: 'admin@example.com',
+    position: { x: 700, y: 200 },
+    required: false,
+    defaultValue: 'admin@example.com',
+    connections: []
+  },
+  {
+    id: 'input_token_001',
+    type: InputParameterType.TOKEN,
+    name: 'SSH Key',
+    value: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG...',
+    position: { x: 700, y: 300 },
+    required: false,
+    defaultValue: '',
+    connections: []
+  },
+  {
+    id: 'input_size_001',
+    type: InputParameterType.SIZE,
+    name: 'Key Size',
+    value: '4096',
+    position: { x: 700, y: 400 },
+    required: false,
+    defaultValue: '4096',
+    connections: []
+  },
+  {
+    id: 'input_timeout_001',
+    type: InputParameterType.TIMEOUT,
+    name: 'Timeout',
+    value: '30',
+    position: { x: 1000, y: 100 },
+    required: false,
+    defaultValue: '10',
+    connections: []
+  }
+];
