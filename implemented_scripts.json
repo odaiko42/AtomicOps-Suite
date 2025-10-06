@@ -1,0 +1,121 @@
+[
+  {
+    "name": "snapshot-kvm.vm.sh",
+    "category": "virtualization",
+    "description": "Créer un snapshot d'une machine virtuelle KVM",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "start-compose.stack.sh",
+    "category": "container",
+    "description": "Démarrer une stack Docker Compose",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "start-docker.container.sh",
+    "category": "container",
+    "description": "Démarrer un conteneur Docker",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "start-kvm.vm.sh",
+    "category": "virtualization",
+    "description": "Démarrer une machine virtuelle KVM",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "start-lxc.container.sh",
+    "category": "container",
+    "description": "Démarrer un conteneur LXC/LXD",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "stop-compose.stack.sh",
+    "category": "container",
+    "description": "Arrêter une stack Docker Compose",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "stop-docker.container.sh",
+    "category": "container",
+    "description": "Arrêter un conteneur Docker",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "stop-kvm.vm.sh",
+    "category": "virtualization",
+    "description": "Arrêter une machine virtuelle KVM",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "sync-directory.bidirectional.sh",
+    "category": "synchronization",
+    "description": "Synchroniser des répertoires de manière bidirectionnelle",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "sync-directory.rsync.sh",
+    "category": "synchronization",
+    "description": "Synchroniser des répertoires avec rsync (unidirectionnel)",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "test-network.speed.sh",
+    "category": "network",
+    "description": "Tester la vitesse réseau (bande passante)",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "unlock-user.sh",
+    "category": "user_management",
+    "description": "Déverrouiller un compte utilisateur système",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "unmount-disk.partition.sh",
+    "category": "storage",
+    "description": "Démonter une partition ou un disque de manière sécurisée",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "update-package.all.yum.sh",
+    "category": "package_management",
+    "description": "Mettre à jour tous les packages via YUM/DNF",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "update-package.list.apt.sh",
+    "category": "package_management",
+    "description": "Mettre à jour la liste des packages via APT",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "upgrade-package.all.apt.sh",
+    "category": "package_management",
+    "description": "Mettre à niveau tous les packages via APT",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  },
+  {
+    "name": "vacuum-postgresql.database.sh",
+    "category": "database",
+    "description": "Optimiser une base de données PostgreSQL avec VACUUM",
+    "implementation_date": "2025-10-06",
+    "complexity_score": 10
+  }
+]
