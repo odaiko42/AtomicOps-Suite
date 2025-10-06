@@ -1,25 +1,25 @@
-restore-directory.sh
-restore-file.sh
-revoke-user.sudo.sh
-rotate-log.sh
-run-smart.test.sh
-schedule-task.at.sh
-search-log.pattern.sh
-search-package.apt.sh
-send-notification.email.sh
-send-notification.slack.sh
-send-notification.telegram.sh
-set-config.kernel.parameter.sh
-set-cpu.governor.sh
-set-dns.server.sh
-set-env.variable.sh
-set-file.acl.sh
-set-file.owner.sh
-set-file.permissions.sh
-set-network.interface.ip.sh
-set-password.expiry.sh
-set-system.hostname.sh
-set-system.timezone.sh
+✅ restore-directory.sh
+✅ restore-file.sh
+✅ revoke-user.sudo.sh
+✅ rotate-log.sh
+✅ run-smart.test.sh
+✅ schedule-task.at.sh
+✅ search-log.pattern.sh
+✅ search-package.apt.sh
+✅ send-notification.email.sh
+✅ send-notification.slack.sh
+✅ send-notification.telegram.sh
+✅ set-config.kernel.parameter.sh
+✅ set-cpu.governor.sh
+✅ set-dns.server.sh
+✅ set-env.variable.sh
+✅ set-file.acl.sh
+✅ set-file.owner.sh
+✅ set-file.permissions.sh
+✅ set-network.interface.ip.sh
+✅ set-password.expiry.sh
+✅ set-system.hostname.sh
+✅ set-system.timezone.sh
 snapshot-kvm.vm.sh
 start-compose.stack.sh
 start-docker.container.sh
