@@ -20,28 +20,28 @@
 ✅ set-password.expiry.sh
 ✅ set-system.hostname.sh
 ✅ set-system.timezone.sh
-snapshot-kvm.vm.sh
-start-compose.stack.sh
-start-docker.container.sh
-start-kvm.vm.sh
-start-lxc.container.sh
+✅ snapshot-kvm.vm.sh
+✅ start-compose.stack.sh
+✅ start-docker.container.sh
+✅ start-kvm.vm.sh
+✅ start-lxc.container.sh
 start-service.sh
-stop-compose.stack.sh
-stop-docker.container.sh
-stop-kvm.vm.sh
+✅ stop-compose.stack.sh
+✅ stop-docker.container.sh
+✅ stop-kvm.vm.sh
 stop-lxc.container.sh
 stop-service.sh
-sync-directory.bidirectional.sh
-sync-directory.rsync.sh
+✅ sync-directory.bidirectional.sh
+✅ sync-directory.rsync.sh
 test-network.ping.sh
 test-network.port.sh
-test-network.speed.sh
-unlock-user.sh
-unmount-disk.partition.sh
-update-package.all.yum.sh
-update-package.list.apt.sh
-upgrade-package.all.apt.sh
-vacuum-postgresql.database.sh
+✅ test-network.speed.sh
+✅ unlock-user.sh
+✅ unmount-disk.partition.sh
+✅ update-package.all.yum.sh
+✅ update-package.list.apt.sh
+✅ upgrade-package.all.apt.sh
+✅ vacuum-postgresql.database.sh
 ```
 
 ### F. Matrice de Compatibilité Distributions
@@ -94,7 +94,7 @@ vacuum-postgresql.database.sh
 2. ✅ `detect-disk.all.sh`
 3. ✅ `format-disk.ext4.sh`
 4. `mount-disk.partition.sh`
-5. `unmount-disk.partition.sh`
+5. ✅ `unmount-disk.partition.sh`
 
 #### Phase 5 : Services et Processus (Semaine 5)
 1. ✅ `start-service.sh`
@@ -392,13 +392,13 @@ Pour questions, suggestions ou contributions sur ce catalogue :
 **Dépendances** : `docker logs`  
 **Use case** : Diagnostic application
 
-#### `start-docker.container.sh`
+#### ✅ `start-docker.container.sh`
 **Description** : Démarre un conteneur Docker  
 **Entrée** : Container ID ou nom  
 **Dépendances** : `docker start`  
 **Use case** : Gestion conteneurs
 
-#### `stop-docker.container.sh`
+#### ✅ `stop-docker.container.sh`
 **Description** : Arrête un conteneur Docker  
 **Entrée** : Container ID ou nom  
 **Dépendances** : `docker stop`  
@@ -437,13 +437,13 @@ Pour questions, suggestions ou contributions sur ce catalogue :
 **Dépendances** : `docker-compose ps`  
 **Use case** : Gestion stack
 
-#### `start-compose.stack.sh`
+#### ✅ `start-compose.stack.sh`
 **Description** : Démarre une stack Docker Compose  
 **Entrée** : Chemin docker-compose.yml  
 **Dépendances** : `docker-compose up -d`  
 **Use case** : Déploiement stack
 
-#### `stop-compose.stack.sh`
+#### ✅ `stop-compose.stack.sh`
 **Description** : Arrête une stack Docker Compose  
 **Entrée** : Chemin docker-compose.yml  
 **Dépendances** : `docker-compose down`  
@@ -471,7 +471,7 @@ Pour questions, suggestions ou contributions sur ce catalogue :
 **Dépendances** : `lxc-ls`, `lxc list`  
 **Use case** : Inventaire LXC
 
-#### `start-lxc.container.sh`
+#### ✅ `start-lxc.container.sh`
 **Description** : Démarre un conteneur LXC  
 **Entrée** : Nom conteneur  
 **Dépendances** : `lxc-start`, `lxc start`  
@@ -498,19 +498,19 @@ Pour questions, suggestions ou contributions sur ce catalogue :
 **Dépendances** : `virsh dominfo`  
 **Use case** : Analyse VM
 
-#### `start-kvm.vm.sh`
+#### ✅ `start-kvm.vm.sh`
 **Description** : Démarre une VM KVM  
 **Entrée** : Nom VM  
 **Dépendances** : `virsh start`  
 **Use case** : Gestion VMs
 
-#### `stop-kvm.vm.sh`
+#### ✅ `stop-kvm.vm.sh`
 **Description** : Arrête une VM KVM  
 **Entrée** : Nom VM, force (optionnel)  
 **Dépendances** : `virsh shutdown`, `virsh destroy`  
 **Use case** : Gestion VMs
 
-#### `snapshot-kvm.vm.sh`
+#### ✅ `snapshot-kvm.vm.sh`
 **Description** : Crée un snapshot d'une VM KVM  
 **Entrée** : Nom VM, nom snapshot  
 **Dépendances** : `virsh snapshot-create-as`  
@@ -650,7 +650,7 @@ Pour questions, suggestions ou contributions sur ce catalogue :
 **Dépendances** : `ifstat`, `iftop`  
 **Use case** : Monitoring réseau
 
-#### `test-network.speed.sh`
+#### ✅ `test-network.speed.sh`
 **Description** : Test de vitesse réseau (speedtest)  
 **Sortie** : Download, upload, ping  
 **Dépendances** : `speedtest-cli`  
@@ -1347,13 +1347,13 @@ restore-directory.sh#### `set-file.permissions.sh`
 
 ### 7.3 Synchronisation
 
-#### `sync-directory.rsync.sh`
+#### ✅ `sync-directory.rsync.sh`
 **Description** : Synchronise deux répertoires avec rsync  
 **Entrée** : Source, destination, options  
 **Dépendances** : `rsync`  
 **Use case** : Sync données, backup incrémental
 
-#### `sync-directory.bidirectional.sh`
+#### ✅ `sync-directory.bidirectional.sh`
 **Description** : Synchronisation bidirectionnelle  
 **Entrée** : Répertoire1, répertoire2  
 **Dépendances** : `rsync`, `unison`  
@@ -1523,12 +1523,12 @@ restore-directory.sh#### `set-file.permissions.sh`
 **Dépendances** : `apt-get remove`  
 **Use case** : Nettoyage système
 
-#### `update-package.list.apt.sh`
+#### ✅ `update-package.list.apt.sh`
 **Description** : Met à jour la liste des packages APT  
 **Dépendances** : `apt-get update`  
 **Use case** : Préparation installation
 
-#### `upgrade-package.all.apt.sh`
+#### ✅ `upgrade-package.all.apt.sh`
 **Description** : Met à jour tous les packages APT  
 **Dépendances** : `apt-get upgrade`  
 **Use case** : Maintenance système
@@ -1559,7 +1559,7 @@ restore-directory.sh#### `set-file.permissions.sh`
 **Dépendances** : `yum remove`, `dnf remove`  
 **Use case** : Nettoyage RHEL
 
-#### `update-package.all.yum.sh`
+#### ✅ `update-package.all.yum.sh`
 **Description** : Met à jour tous les packages YUM/DNF  
 **Dépendances** : `yum update`, `dnf update`  
 **Use case** : Maintenance RHEL
@@ -1847,7 +1847,7 @@ restore-directory.sh#### `set-file.permissions.sh`
 **Dépendances** : `psql -c "\dt"`  
 **Use case** : Analyse structure
 
-#### `vacuum-postgresql.database.sh`
+#### ✅ `vacuum-postgresql.database.sh`
 **Description** : Lance VACUUM sur une base PostgreSQL  
 **Entrée** : Nom BDD, full (optionnel)  
 **Dépendances** : `vacuumdb`  
@@ -2048,7 +2048,7 @@ Ce catalogue liste tous les scripts atomiques organisés par catégorie fonction
 **Dépendances** : `mount`  
 **Use case** : Accès stockage
 
-#### `unmount-disk.partition.sh`
+#### ✅ `unmount-disk.partition.sh`
 **Description** : Démonte une partition  
 **Entrée** : Point de montage ou partition  
 **Dépendances** : `umount`  
@@ -2330,7 +2330,7 @@ Ce catalogue liste tous les scripts atomiques organisés par catégorie fonction
 **Dépendances** : `usermod`, `passwd`  
 **Use case** : Sécurité, suspension compte
 
-#### `unlock-user.sh`
+#### ✅ `unlock-user.sh`
 **Description** : Déverrouille un compte utilisateur  
 **Entrée** : Username  
 **Dépendances** : `usermod`, `passwd`  
